@@ -2,7 +2,7 @@ import sys
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
-from EditableLabel import EditableLabel
+from EditableLabel import EditableLabel, ClassType
 
 
 class Container(QtWidgets.QWidget):
@@ -71,7 +71,7 @@ class Container(QtWidgets.QWidget):
         self.body_frame.setMinimumHeight(height)
 
     def addVariableName(self):
-        var = EditableLabel(parent=self)
+        var = ClassType(parent=self, placeHolder="Variable Name")
         var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
 
         var.setText("Variable Name")
@@ -80,7 +80,7 @@ class Container(QtWidgets.QWidget):
         self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
     def addMethodName(self):
-        var = EditableLabel(parent=self)
+        var = ClassType(parent=self, placeHolder="Method Name", type=1)
         var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
 
         var.setText("Method Name")
@@ -95,10 +95,6 @@ class Container(QtWidgets.QWidget):
         if not label:
             label = self._title
         self.title.setText(label)
-
-    def resizeEvent(self, a0: QtGui.QResizeEvent) -> None:
-        super(Container, self).resizeEvent(a0)
-        print("RESIZE: ", self.size())
 
 
 class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no widget is there
@@ -190,7 +186,6 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         painter.drawRect(self.boundingRect().adjusted(-1, -1, 1, 1))
 
         painter.restore()
-
 
 if __name__ == "__main__":
 
