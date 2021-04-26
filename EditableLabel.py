@@ -1,3 +1,4 @@
+import textwrap
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 
@@ -93,6 +94,7 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
 
         self.member_type = self._member_types[type]
         self.type = "I"
+        self.comment = ""
 
         self.type_lbl = QtWidgets.QLabel(self.type)
         self.hlayout.addWidget(self.type_lbl)
@@ -103,9 +105,13 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
 
     def _setTooltip(self):
         type_tooltip = f"{self._types[self.type]} {self.member_type}"
+        widget_tooltip = f"{type_tooltip} name: {self.getText()}"
+
+        if self.comment:
+            widget_tooltip += f" \n Comment: \n\t {textwrap.fill(self.comment, 50)}"
 
         self.type_lbl.setToolTip(type_tooltip)
-        self.setToolTip(f"{self.member_type} name: {self.getText()}\n{type_tooltip}")
+        self.setToolTip(widget_tooltip)
 
     def setType(self, type: str):
 
@@ -119,6 +125,25 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
             self.member_type = self._member_types[type]
         except KeyError:
             pass
+
+    def addComment(self):
+        win = CommentDialog()
+
+        if win.exec():
+            self.comment = win.getComment()
+            self._setTooltip()
+
+    def removeComment(self):
+        self.comment = ""
+        self._setTooltip()
+
+    def editComment(self):
+        win = CommentDialog()
+        win.setComment(self.comment)
+
+        if win.exec():
+            self.comment = win.getComment()
+            self._setTooltip()
 
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
         menu = QtWidgets.QMenu(self)
@@ -135,8 +160,59 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         make_static = QtWidgets.QAction(f"-> static {self.member_type}", self)
         make_static.triggered.connect(lambda: self.setType("S"))
 
+        add_comment = QtWidgets.QAction("Add Comment", self)
+        add_comment.triggered.connect(self.addComment)
+
+        remove_comment = QtWidgets.QAction("Remove Comment", self)
+        remove_comment.triggered.connect(self.removeComment)
+
+        edit_comment = QtWidgets.QAction("Edit Comment", self)
+        edit_comment.triggered.connect(self.editComment)
+
+        if not self.comment:
+            remove_comment.setDisabled(True)
+            edit_comment.setDisabled(True)
+
         menu.addAction(delete_widget)
         menu.addSeparator()
         menu.addActions([make_instance, make_class, make_static])
+        menu.addSeparator()
+
+        menu.addActions([add_comment, remove_comment, edit_comment])
 
         menu.popup(self.mapToGlobal(event.pos()))
+
+
+class CommentDialog(QtWidgets.QDialog):
+
+    def __init__(self, title="Add Comment", *args, **kwargs):
+        super(CommentDialog, self).__init__(*args, **kwargs)
+        self.setModal(True)
+        self.setWindowTitle(title)
+
+        layout = QtWidgets.QFormLayout(self)
+
+        self.textArea = QtWidgets.QTextEdit()
+        self.textArea.setPlaceholderText("Type a comment...")
+        self.textArea.setWordWrapMode(QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
+
+        ok_btn = QtWidgets.QPushButton("Ok")
+        ok_btn.clicked.connect(self.accept)
+
+        cancel_btn = QtWidgets.QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.close)
+
+        layout.addWidget(self.textArea)
+        layout.addRow(cancel_btn, ok_btn)
+
+        layout.setAlignment(self.textArea, QtCore.Qt.AlignCenter)
+        layout.setAlignment(ok_btn, QtCore.Qt.AlignRight)
+        layout.setAlignment(cancel_btn, QtCore.Qt.AlignRight)
+
+    def getComment(self):
+        return self.textArea.toPlainText()
+
+    def setComment(self, text):
+        self.textArea.setText(text)
+        self.textArea.selectAll()
+        self.textArea.moveCursor(QtGui.QTextCursor.End)

@@ -67,9 +67,6 @@ class Container(QtWidgets.QWidget):
     def setTitleHeight(self, height):
         self.title_frame.setFixedHeight(height)
 
-    def setBodyHeight(self, height):
-        self.body_frame.setMinimumHeight(height)
-
     def addVariableName(self):
         var = ClassType(parent=self, placeHolder="Variable Name")
         var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
@@ -108,11 +105,6 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
 
         self._title = "Class: "
 
-        self._title_bg = QtGui.QColor("#4b4c4f")
-        self._title_fg = QtGui.QColor("#ffffff")
-        self._body_bg = QtGui.QColor("#7c7e82")
-        self._body_fg = QtGui.QColor("#ffffff")
-
         self._border_color = QtGui.QColor("#959596")
         self._selection_color = QtGui.QColor("#6868d4")
 
@@ -135,7 +127,6 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
 
         self.container.setTitle(self._title)
         self.setTitleRect(100, 40)
-        # self.setBodyHeight(250)
 
     @property
     def title(self):
@@ -160,9 +151,6 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     def setTitleRect(self, width, height):
         self.proxy.setMinimumWidth(width)
         self.container.setTitleHeight(height)
-
-    def setBodyHeight(self, height):
-        self.container.setBodyHeight(height)
 
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
