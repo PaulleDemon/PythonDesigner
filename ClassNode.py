@@ -1,27 +1,107 @@
 import sys
 
 from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import pyqtProperty, QObject
+from PyQt5.QtCore import pyqtProperty
 from EditableLabel import EditableLabel
 
 
 class Container(QtWidgets.QWidget):
 
-    def __init__(self, *args, **kwargs):
+    _style = """
+            QFrame#TitleFrame{background-color: red;}
+            QFrame#Seperator{background-color: black;}
+            """
+
+    def __init__(self, title="Class", *args, **kwargs):
         super(Container, self).__init__(*args, **kwargs)
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.vlayout = QtWidgets.QVBoxLayout(self)
         self.vlayout.setContentsMargins(0, 0, 0, 0)
         self.vlayout.setSpacing(0)
 
-        # self.title_layout = QtWidgets.QFormLayout()
-        # self.body_layout = QtWidgets.QVBoxLayout()
+        self.title_frame = QtWidgets.QFrame()
+        self.body_frame = QtWidgets.QFrame()
+        self.title_frame.setObjectName("TitleFrame")
+        self.body_frame.setObjectName("BodyFrame")
 
-        # layout.addLayout(self.title_layout)
-        # layout.addLayout(self.body_layout)
-        self.setStyleSheet("background-color: transparent;")
+        self.title_layout = QtWidgets.QFormLayout(self.title_frame)
+        self.body_layout = QtWidgets.QFormLayout(self.body_frame)
 
-class ClassNode(QtWidgets.QGraphicsItem):
+        self.title_layout.setContentsMargins(2, 2, 2, 2)
+        self.body_layout.setContentsMargins(2, 2, 2, 2)
+
+        self.class_title = EditableLabel("Class Name")
+        self.title = QtWidgets.QLabel(title)
+        self.title_layout.addRow(self.title, self.class_title)
+
+        variable_frame = QtWidgets.QFrame()
+        method_frame = QtWidgets.QFrame()
+
+        self.variable_layout = QtWidgets.QFormLayout(variable_frame)
+        self.method_layout = QtWidgets.QFormLayout(method_frame)
+
+        self.add_variable_btn = QtWidgets.QPushButton("Add Variable")
+        self.add_variable_btn.clicked.connect(self.addVariableName)
+        self.add_method_btn = QtWidgets.QPushButton("Add Method")
+        self.add_method_btn.clicked.connect(self.addMethodName)
+
+        self.variable_layout.addWidget(self.add_variable_btn)
+        self.method_layout.addWidget(self.add_method_btn)
+
+        self.vlayout.addWidget(self.title_frame)
+        self.vlayout.addWidget(self.body_frame)
+
+        seperator = QtWidgets.QFrame()
+        seperator.setObjectName("Seperator")
+        seperator.setFrameShape(QtWidgets.QFrame.HLine)
+
+        self.body_layout.addWidget(variable_frame)
+        self.body_layout.addWidget(seperator)
+        self.body_layout.addWidget(method_frame)
+
+        self.setStyleSheet(self._style)
+
+    def addBody(self, widget):
+        self.body_layout.addWidget(widget)
+
+    def setTitleHeight(self, height):
+        self.title_frame.setFixedHeight(height)
+
+    def setBodyHeight(self, height):
+        self.body_frame.setMinimumHeight(height)
+
+    def addVariableName(self):
+        var = EditableLabel(parent=self)
+        var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
+
+        var.setText("Variable Name")
+        var.setMinimumHeight(30)
+        var.deleted.connect(self.adjust)
+        self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
+
+    def addMethodName(self):
+        var = EditableLabel(parent=self)
+        var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
+
+        var.setText("Method Name")
+        var.setMinimumHeight(30)
+        var.deleted.connect(self.adjust)
+        self.method_layout.insertRow(self.method_layout.count() - 1, var)
+
+    def adjust(self):
+        QtCore.QTimer.singleShot(10, self.adjustSize)
+
+    def setTitle(self, label: str = ""):
+        if not label:
+            label = self._title
+        self.title.setText(label)
+
+    def resizeEvent(self, a0: QtGui.QResizeEvent) -> None:
+        super(Container, self).resizeEvent(a0)
+        print("RESIZE: ", self.size())
+
+
+class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no widget is there
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
@@ -30,7 +110,7 @@ class ClassNode(QtWidgets.QGraphicsItem):
         self.setFlag(self.ItemIsSelectable, True)
         # self.setFlag(self.ItemIsFocusable, True)
 
-        self._title = "None"
+        self._title = "Class: "
 
         self._title_bg = QtGui.QColor("#4b4c4f")
         self._title_fg = QtGui.QColor("#ffffff")
@@ -52,27 +132,14 @@ class ClassNode(QtWidgets.QGraphicsItem):
 
         self.container = Container()
         self.proxy = QtWidgets.QGraphicsProxyWidget(self)
-        # self.proxy = ProxyWidget(self)
 
         self.proxy.setWidget(self.container)
+        # self.proxy.setMinimumSize(300, 200)
         self.proxy.setContentsMargins(0, 0, 0, 0)
-        self.proxy.setMinimumSize(300, 150)
 
-        self.class_title = EditableLabel("Class Name")
-        # self.class_title = QtWidgets.QPushButton("Class Name")
-        # self.class_title.clicked.connect(lambda : print("CLICKED PUSH BUTTON"))
-
-        frame = QtWidgets.QFrame()
-        frame.setFixedSize(self._title_rect.toRect().width(), self._title_rect.toRect().height())
-        title_layout = QtWidgets.QFormLayout(frame)
-        title_layout.setContentsMargins(0, 0, 0, 0)
-        title_layout.addRow(QtWidgets.QLabel("Class"), self.class_title)
-        frame.setStyleSheet("background-color: red;")
-        self.container.layout().addStretch(1)
-        self._addWidget(frame)
-
-    def _addWidget(self, widget: QtWidgets.QWidget):
-        self.container.layout().addWidget(widget)
+        self.container.setTitle(self._title)
+        self.setTitleRect(100, 40)
+        # self.setBodyHeight(250)
 
     @property
     def title(self):
@@ -82,35 +149,11 @@ class ClassNode(QtWidgets.QGraphicsItem):
     def title(self, title):
         self._title = title
 
-    def _titleFg(self):
-        return self._title_fg
-
-    def _titleBg(self):
-        return self._title_bg
-
-    def _bodyFg(self):
-        return self._body_fg
-
-    def _bodyBg(self):
-        return self._body_bg
-
     def _borderColor(self):
         return self._border_color
 
     def _selectionColor(self):
         return self._selection_color
-
-    def _setTitleBg(self, color: QtGui.QColor):
-        self._title_bg = color
-
-    def _setTitleFg(self, color: QtGui.QColor):
-        self._title_fg = color
-
-    def _setBodyBg(self, color: QtGui.QColor):
-        self._body_bg = color
-
-    def _setBodyFg(self, color: QtGui.QColor):
-        self._body_fg = color
 
     def _setborderColor(self, color: QtGui.QColor):
         self._border_color = color
@@ -119,43 +162,21 @@ class ClassNode(QtWidgets.QGraphicsItem):
         self._selection_color = color
 
     def setTitleRect(self, width, height):
-        self._title_rect = QtCore.QRectF(0, 0, width, height)
-        self.setBodyHeight()
+        self.proxy.setMinimumWidth(width)
+        self.container.setTitleHeight(height)
 
-    def setBodyHeight(self, height: int = -1):
-
-        if height == -1:
-            height = self._body_rect.height()
-
-        y, width = self._title_rect.height(), self._title_rect.width()
-        self._body_rect = QtCore.QRectF(0, y, width, height)
-
-    TextFg = pyqtProperty(QtGui.QColor, _titleFg, _setTitleFg)
-    TextBg = pyqtProperty(QtGui.QColor, _titleBg, _setTitleBg)
-    BodyFg = pyqtProperty(QtGui.QColor, _titleFg, _setTitleFg)
-    BodyBg = pyqtProperty(QtGui.QColor, _titleBg, _setTitleBg)
+    def setBodyHeight(self, height):
+        self.container.setBodyHeight(height)
 
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
-    # def mousePressEvent(self, event) -> None:
-    #
-    #     print("FocusWidget: ", self.container.focusWidget())
-    #     if isinstance(self.container.focusWidget(), QtWidgets.QLineEdit):
-    #         self.container.clearFocus()
-    #
-    #     super(ClassNode, self).mousePressEvent(event)
-
-    # def sceneEventFilter(self, watched: 'QGraphicsItem', event: QtCore.QEvent) -> bool:
-
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        print("DOUBLE CLICKED")
         self.proxy.mouseDoubleClickEvent(event)
-
         super(ClassNode, self).mouseDoubleClickEvent(event)
 
     def boundingRect(self):
-        return self._title_rect.united(self._body_rect)
+        return self.proxy.boundingRect()
 
     def paint(self, painter, option, widget):
         painter.save()
@@ -166,26 +187,18 @@ class ClassNode(QtWidgets.QGraphicsItem):
             self._pen.setColor(self._selection_color)
 
         painter.setPen(self._pen)
-        painter.drawRect(self._title_rect.united(self._body_rect).adjusted(-0.7, -0.7, 1, 1))
-
-        painter.setPen(QtCore.Qt.NoPen)
-        painter.setBrush(self._title_bg)
-        painter.drawRect(self._title_rect)
-
-        painter.setBrush(self._body_bg)
-        painter.drawRect(self._body_rect)
+        painter.drawRect(self.boundingRect().adjusted(-1, -1, 1, 1))
 
         painter.restore()
 
 
 if __name__ == "__main__":
+
     app = QtWidgets.QApplication(sys.argv)
     view = QtWidgets.QGraphicsView()
     view.setViewportUpdateMode(view.FullViewportUpdate)
 
     cls = ClassNode()
-    cls.setTitleRect(250, 50)
-    cls.setBodyHeight(300)
 
     scene = QtWidgets.QGraphicsScene()
     scene.addItem(cls)
