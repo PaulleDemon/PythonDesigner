@@ -1,5 +1,3 @@
-import sys
-
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 from EditableLabel import EditableLabel, ClassType
@@ -31,6 +29,9 @@ class Container(QtWidgets.QWidget):
         self.body_layout.setContentsMargins(2, 2, 2, 2)
 
         self.class_title = EditableLabel("Class Name")
+        self.class_title.enableToolTip("Class Name")
+        self.class_title.setValidator()
+
         self.title = QtWidgets.QLabel(title)
         self.title_layout.addRow(self.title, self.class_title)
 
@@ -69,7 +70,7 @@ class Container(QtWidgets.QWidget):
 
     def addVariableName(self):
         var = ClassType(parent=self, placeHolder="Variable Name")
-        var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
+        var.setValidator()
 
         var.setText("Variable Name")
         var.setMinimumHeight(30)
@@ -78,7 +79,7 @@ class Container(QtWidgets.QWidget):
 
     def addMethodName(self):
         var = ClassType(parent=self, placeHolder="Method Name", type=1)
-        var.setValidator("^[a-zA-Z_$][a-zA-Z_$0-9]*$")
+        var.setValidator()
 
         var.setText("Method Name")
         var.setMinimumHeight(30)
@@ -175,18 +176,5 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
 
         painter.restore()
 
-if __name__ == "__main__":
 
-    app = QtWidgets.QApplication(sys.argv)
-    view = QtWidgets.QGraphicsView()
-    view.setViewportUpdateMode(view.FullViewportUpdate)
 
-    cls = ClassNode()
-
-    scene = QtWidgets.QGraphicsScene()
-    scene.addItem(cls)
-
-    view.setScene(scene)
-    view.show()
-
-    sys.exit(app.exec())

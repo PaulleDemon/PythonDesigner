@@ -1,16 +1,34 @@
-# This is a sample Python script.
+import sys
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from PyQt5 import QtWidgets
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from Path import DirectPath
+from ClassNode import ClassNode
+from ViewPort import ViewPort
 
 
-# Press the green button in the gutter to run the script.
+def main():
+    if __name__ == "__main__":
+        app = QtWidgets.QApplication(sys.argv)
+
+        view = ViewPort()
+        # view.setStyleSheet("#View{qproperty-GridColor: #615e5e; qproperty-BgColor: #c4c4c4; qproperty-PenWidth: 1.2;}")
+
+        cls = ClassNode()
+        cls2 = ClassNode()
+        # path = DirectPath()
+
+        scene = QtWidgets.QGraphicsScene()
+        scene.addItem(cls)
+        scene.addItem(cls2)
+        # scene.addItem(path)
+
+        view.setScene(scene)
+        view.show()
+
+        sys.exit(app.exec())
+
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    main()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

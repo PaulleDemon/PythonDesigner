@@ -10,6 +10,7 @@ class EditableLabel(QtWidgets.QWidget):
         super(EditableLabel, self).__init__(*args, **kwargs)
 
         self._text = text
+        self._toolTipHeading = ""
 
         self.hlayout = QtWidgets.QHBoxLayout(self)
         self.hlayout.setContentsMargins(0, 0, 0, 0)
@@ -43,17 +44,6 @@ class EditableLabel(QtWidgets.QWidget):
         self._edit_label.hide()
         self._label.show()
 
-    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-        menu = QtWidgets.QMenu(self)
-
-        delete_widget = QtWidgets.QAction("Delete", self)
-        delete_widget.triggered.connect(self.deleteWidget)
-
-        menu.addAction(delete_widget)
-        menu.popup(self.mapToGlobal(event.pos()))
-
-        super(EditableLabel, self).contextMenuEvent(event)
-
     def deleteWidget(self):
         self.deleteLater()
         self.deleted.emit()
@@ -64,8 +54,6 @@ class EditableLabel(QtWidgets.QWidget):
             self._edit_label.show()
             self._edit_label.setText(self._label.text())
             self._edit_label.selectAll()
-            if self._edit_label.text() == self._text:
-                self._edit_label.setText("")
 
             self._edit_label.setFocus()
             super(EditableLabel, self).mouseDoubleClickEvent(event)
@@ -78,10 +66,17 @@ class EditableLabel(QtWidgets.QWidget):
     def getText(self):
         return self._text
 
-    def setValidator(self, regex: str):
+    def setValidator(self, regex: str = "^[a-zA-Z_$][a-zA-Z_$0-9]*$"):
         regexp = QtCore.QRegExp(regex)
         validator = QtGui.QRegExpValidator(regexp)
         self._edit_label.setValidator(validator)
+
+    def _updateToolTip(self):
+        self._label.setToolTip(f"{self._toolTipHeading}: {textwrap.fill(self.getText(), 15)}")
+
+    def enableToolTip(self, heading=""):
+        self._toolTipHeading = heading
+        self._edit_label.textChanged.connect(self._updateToolTip)
 
 
 class ClassType(EditableLabel):  # class that specifies what type of method, eg: - instance method static method etc.
@@ -138,7 +133,7 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         self._setTooltip()
 
     def editComment(self):
-        win = CommentDialog()
+        win = CommentDialog(title="Edit Comment")
         win.setComment(self.comment)
 
         if win.exec():
@@ -187,10 +182,12 @@ class CommentDialog(QtWidgets.QDialog):
 
     def __init__(self, title="Add Comment", *args, **kwargs):
         super(CommentDialog, self).__init__(*args, **kwargs)
+
+        self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
         self.setModal(True)
         self.setWindowTitle(title)
 
-        layout = QtWidgets.QFormLayout(self)
+        layout = QtWidgets.QGridLayout(self)
 
         self.textArea = QtWidgets.QTextEdit()
         self.textArea.setPlaceholderText("Type a comment...")
@@ -202,12 +199,14 @@ class CommentDialog(QtWidgets.QDialog):
         cancel_btn = QtWidgets.QPushButton("Cancel")
         cancel_btn.clicked.connect(self.close)
 
-        layout.addWidget(self.textArea)
-        layout.addRow(cancel_btn, ok_btn)
+        layout.addWidget(self.textArea, 0, 0, 1, 2)
+        layout.addWidget(ok_btn, 1, 1)
+        layout.addWidget(cancel_btn, 1, 0)
 
         layout.setAlignment(self.textArea, QtCore.Qt.AlignCenter)
         layout.setAlignment(ok_btn, QtCore.Qt.AlignRight)
         layout.setAlignment(cancel_btn, QtCore.Qt.AlignRight)
+        self.setFixedSize(250, 200)
 
     def getComment(self):
         return self.textArea.toPlainText()
