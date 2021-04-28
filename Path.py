@@ -4,11 +4,8 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 
 
-# EDGE_CP_ROUNDNESS = 100     #: Bezier control point distance on the line
-EDGE_CP_ROUNDNESS = 150     #: Bezier control point distance on the line
-# WEIGHT_SOURCE = 0.2         #: factor for square edge to change the midpoint between start and end socket
+EDGE_ROUNDNESS = 150     #: Bezier control point distance on the line
 WEIGHT_SOURCE = 0.2         #: factor for square edge to change the midpoint between start and end socket
-
 
 DIRECT_PATH = 0
 BEZIER_PATH = 1
@@ -46,6 +43,8 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         self._arrow_height = 5
         self._arrow_width = 4
+
+        self.path_calc = PathCalc(self._source, self._destination)
 
     def pathColor(self):
         return self._path_color
@@ -170,18 +169,63 @@ class Path(QtWidgets.QGraphicsPathItem):
         except ZeroDivisionError:
             return None
 
-    def squarePath(self):
-        s = self.getSourcePoints()
-        d = self.getDestinationPoints()
+    def calcPath(self):
 
-        mid_x = s.x() + ((d.x() - s.x()) * self._handle_weight)
+        self.path_calc.setSource(self.getSourcePoints())
+        self.path_calc.setDestiation(self.getDestinationPoints())
 
-        path = QtGui.QPainterPath(QtCore.QPointF(s.x(), s.y()))
-        path.lineTo(mid_x, s.y())
-        path.lineTo(mid_x, d.y())
-        path.lineTo(d.x(), d.y())
+        if self._path_type == DIRECT_PATH:
+            return self.path_calc.directPath()
 
-        return path
+        elif self._path_type == BEZIER_PATH:
+            return self.path_calc.bezierPath()
+
+        else:
+            return self.path_calc.squarePath()
+
+    def paint(self, painter: QtGui.QPainter, option, widget=None) -> None:
+
+        pen = QtGui.QPen(QtGui.QPen(self._path_color, self._pen_width))
+
+        painter.setRenderHint(painter.Antialiasing)
+
+        if self.isSelected():
+            pen.setColor(QtGui.QColor(self._selection_color))
+
+        if self._hovered:
+            pen.setColor(QtGui.QColor(self._hover_Color))
+
+        painter.setPen(pen)
+        painter.setBrush(QtCore.Qt.NoBrush)
+
+        path = self.calcPath()
+        painter.drawPath(path)
+        self.setPath(path)
+
+        triangle = self.arrowCalc(path.pointAtPercent(0.9), self.getDestinationPoints())
+        # painter.drawPolygon(triangle)
+        if triangle is not  None:
+            painter.drawPolyline(triangle)
+
+
+class PathCalc:
+
+    def __init__(self, sourcePoints:QtCore.QPointF, destinationPoints:QtCore.QPointF, handle_weight = 0.5):
+        self._sourcePoint = sourcePoints
+        self._destinationPoint = destinationPoints
+        self._handle_weight = handle_weight
+
+    def getSourcePoints(self):
+        return self._sourcePoint
+
+    def getDestinationPoints(self):
+        return self._destinationPoint
+
+    def setSource(self, point: QtCore.QPointF):
+        self._sourcePoint = point
+
+    def setDestiation(self, point: QtCore.QPointF):
+        self._destinationPoint = point
 
     def directPath(self):
         start_point = self.getSourcePoints()
@@ -213,54 +257,30 @@ class Path(QtWidgets.QGraphicsPathItem):
                         (source_y - destination_y) / math.fabs(
                         (source_y - destination_y) if (source_y - destination_y) != 0 else 0.00001
                     )
-                    ) * EDGE_CP_ROUNDNESS
+                    ) * EDGE_ROUNDNESS
 
             cpy_s = (
                         (destination_y - source_y) / math.fabs(
                         (destination_y - source_y) if (destination_y - source_y) != 0 else 0.00001
                     )
-                    ) * EDGE_CP_ROUNDNESS
+                    ) * EDGE_ROUNDNESS
 
         path = QtGui.QPainterPath(self.getSourcePoints())
-        # path.cubicTo(source_x + cpx_s, source_y + cpy_s, destination_x + cpx_d, destination_y + cpy_d,
-        #              destination_x, destination_y)
 
         path.cubicTo(destination_x + cpx_d, destination_y + cpy_d, source_x + cpx_s, source_y + cpy_s,
                      destination_x, destination_y)
 
         return path
 
-    def calcPath(self):
+    def squarePath(self):
+        s = self.getSourcePoints()
+        d = self.getDestinationPoints()
 
-        if self._path_type == DIRECT_PATH:
-            return self.directPath()
+        mid_x = s.x() + ((d.x() - s.x()) * self._handle_weight)
 
-        elif self._path_type == BEZIER_PATH:
-            return self.bezierPath()
+        path = QtGui.QPainterPath(QtCore.QPointF(s.x(), s.y()))
+        path.lineTo(mid_x, s.y())
+        path.lineTo(mid_x, d.y())
+        path.lineTo(d.x(), d.y())
 
-        else:
-            return self.squarePath()
-
-    def paint(self, painter: QtGui.QPainter, option, widget=None) -> None:
-
-        pen = QtGui.QPen(QtGui.QPen(self._path_color, self._pen_width))
-
-        painter.setRenderHint(painter.Antialiasing)
-
-        if self.isSelected():
-            pen.setColor(QtGui.QColor(self._selection_color))
-
-        if self._hovered:
-            pen.setColor(QtGui.QColor(self._hover_Color))
-
-        painter.setPen(pen)
-        painter.setBrush(QtCore.Qt.NoBrush)
-
-        path = self.calcPath()
-        painter.drawPath(path)
-        self.setPath(path)
-
-        triangle = self.arrowCalc(path.pointAtPercent(0.9), self.getDestinationPoints())
-        # painter.drawPolygon(triangle)
-        if triangle is not  None:
-            painter.drawPolyline(triangle)
+        return path
