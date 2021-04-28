@@ -2,7 +2,7 @@ import sys
 
 from PyQt5 import QtWidgets
 
-from Path import DirectPath
+from Path import Path
 from ClassNode import ClassNode
 from ViewPort import ViewPort
 

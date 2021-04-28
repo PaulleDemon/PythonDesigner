@@ -94,7 +94,7 @@ class ViewPort(QtWidgets.QGraphicsView):
             self._isdrawingPath = True
             # self._current_path = DirectPath(pos, pos)
             # self._current_path = BezierPath(pos, pos)
-            self._current_path = SquarePath(source=pos, destination=pos)
+            self._current_path = Path(source=pos, destination=pos)
             self.scene().addItem(self._current_path)
 
             return
