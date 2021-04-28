@@ -5,7 +5,7 @@ from PyQt5.QtCore import pyqtProperty
 
 
 # EDGE_CP_ROUNDNESS = 100     #: Bezier control point distance on the line
-EDGE_CP_ROUNDNESS = 200     #: Bezier control point distance on the line
+EDGE_CP_ROUNDNESS = 150     #: Bezier control point distance on the line
 # WEIGHT_SOURCE = 0.2         #: factor for square edge to change the midpoint between start and end socket
 WEIGHT_SOURCE = 0.2         #: factor for square edge to change the midpoint between start and end socket
 
@@ -136,8 +136,6 @@ class Path(QtWidgets.QGraphicsPathItem):
 
     def arrowCalc(self, start_point=None, end_point=None, drawAT=1):
         # if draw at is 1 then the arrow will be drawn at the end
-
-
         try:
             startPoint, endPoint = start_point, end_point
 
@@ -150,7 +148,6 @@ class Path(QtWidgets.QGraphicsPathItem):
             dx, dy = startPoint.x()-endPoint.x(), startPoint.y()-endPoint.y()
 
             leng = math.sqrt(dx**2 + dy**2)
-            print("Leng: ", leng)
             normX, normY = dx/leng, dy/leng  # normalize
 
             # perpendicular vector
@@ -213,14 +210,14 @@ class Path(QtWidgets.QGraphicsPathItem):
             cpx_s *= -1
 
             cpy_d = (
-                            (s.y() - d.y()) / math.fabs(
-                        (s.y() - d.y()) if (s.y() - d.y()) != 0 else 0.00001
+                        (source_y - destination_y) / math.fabs(
+                        (source_y - destination_y) if (source_y - destination_y) != 0 else 0.00001
                     )
                     ) * EDGE_CP_ROUNDNESS
 
             cpy_s = (
-                            (d.y() - s.y()) / math.fabs(
-                        (d.y() - s.y()) if (d.y() - s.y()) != 0 else 0.00001
+                        (destination_y - source_y) / math.fabs(
+                        (destination_y - source_y) if (destination_y - source_y) != 0 else 0.00001
                     )
                     ) * EDGE_CP_ROUNDNESS
 
@@ -230,10 +227,6 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         path.cubicTo(destination_x + cpx_d, destination_y + cpy_d, source_x + cpx_s, source_y + cpy_s,
                      destination_x, destination_y)
-
-        # arrowHead = self.arrowCalc(path.pointAtPercent(0.9), QtCore.QPointF(destination_x, destination_y))
-
-        print("Point At: ", path.pointAtPercent(0.9), destination_y, destination_x)
 
         return path
 
