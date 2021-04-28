@@ -115,6 +115,8 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self._title_rect = QtCore.QRectF(0, 0, 100, 30)
         self._body_rect = QtCore.QRectF(0, 30, 100, 100)
 
+        self.path = {}  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+
         self.InitNode()
 
     def InitNode(self):
@@ -156,12 +158,34 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
+    def addPath(self, path, start=False):  # add new path
+        self.path[path] = start
+
+    def removePath(self, path):  # remove path
+        self.path.pop(path)
+
+    def itemChange(self, change, value):
+        # print(f"Change: {change}; value: {value}")
+        return super(ClassNode, self).itemChange(change, value)
+
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.proxy.mouseDoubleClickEvent(event)
         super(ClassNode, self).mouseDoubleClickEvent(event)
 
     def boundingRect(self):
         return self.proxy.boundingRect()
+
+    def geometry(self):
+
+        pos = self.scenePos()
+        # rect = self.mapToParent(self.boundingRect())
+        scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(), pos.y() + self.sceneBoundingRect().height())
+        x2, y2 = scenepos.x(), scenepos.y()
+        # x2 = rect.boundingRect().height() + pos.x()
+        # y2 = rect.boundingRect().height() + pos.y()
+
+        print("Width, height: ", x2, y2)
+        return QtCore.QRectF(pos, QtCore.QPointF(x2, y2))
 
     def paint(self, painter, option, widget):
         painter.save()

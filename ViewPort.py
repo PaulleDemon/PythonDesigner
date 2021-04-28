@@ -1,6 +1,9 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
+
+from ClassNode import ClassNode
 from Path import *
+
 
 class ViewPort(QtWidgets.QGraphicsView):
     
@@ -12,6 +15,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._isdrawingPath = False
 
         self._current_path = None
+        self._item1 = None
 
         self._penWidth = 1.2
 
@@ -60,7 +64,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         qp.end()
         self.scene().setBackgroundBrush(QtGui.QBrush(self.texture))
 
-
     BgColor = pyqtProperty(QtGui.QColor, bgColor, setBgColor)
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
@@ -90,14 +93,16 @@ class ViewPort(QtWidgets.QGraphicsView):
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
         if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
-            pos = self.mapToScene(event.pos())
-            self._isdrawingPath = True
-            # self._current_path = DirectPath(pos, pos)
-            # self._current_path = BezierPath(pos, pos)
-            self._current_path = Path(source=pos, destination=pos)
-            self.scene().addItem(self._current_path)
 
-            return
+            pos = self.mapToScene(event.pos())
+            item = self.scene().itemAt(pos, QtGui.QTransform())
+            if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
+
+                self._isdrawingPath = True
+                self._current_path = Path(source=pos, destination=pos)
+                self.scene().addItem(self._current_path)
+                self._item1 = item
+                return
 
         if event.button() == QtCore.Qt.LeftButton:
             self._mousePressed = True
@@ -143,11 +148,38 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         if self._isdrawingPath:
             pos = self.mapToScene(event.pos())
-            self._current_path.setDestinationPoints(pos)
-            # self.scene().addItem(self._current_path)
+            self._current_path.setZValue(-1)
+            item = self.scene().itemAt(pos, QtGui.QTransform())
+
+            if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
+                                                                                        and self._item1 != item:
+                # self._current_path.setDestinationPoints(pos)
+
+                if isinstance(item, QtWidgets.QGraphicsProxyWidget):
+                    item = item.parentItem()
+
+                if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
+                    self._item1 = self._item1.parentItem()
+
+                source_point = QtCore.QPointF(self._item1.geometry().width()+2, self._item1.geometry().y()+10)
+                destination_point = QtCore.QPointF(item.geometry().x()-2, item.geometry().y()+10)
+
+                print("YES", self._item1, self._item1.geometry(), self._item1.pos(), self._item1.boundingRect())
+
+                self._current_path.setZValue(1)
+                self._current_path.setSourcePoints(source_point)
+                self._current_path.setDestinationPoints(destination_point)
+
+
+            else:
+                self.scene().removeItem(self._current_path)
+                print("removed")
+
+            self._item1 = None
             self.scene().update(self.sceneRect())
             self._isdrawingPath = False
             self._current_path = None
+
             return
 
         if event.button() == QtCore.Qt.LeftButton:
