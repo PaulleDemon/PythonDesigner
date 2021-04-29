@@ -141,6 +141,11 @@ class Path(QtWidgets.QGraphicsPathItem):
         self._arrow_type = head_type
         self.update(self.sceneBoundingRect())
 
+    def removeItem(self):
+        self._sourceNode.removePath(self)
+        self._destinationNode.removePath(self)
+        self.scene().removeItem(self)
+
     def hoverEnterEvent(self, event) -> None:
         self._hovered = True
         self.update(self.sceneBoundingRect())

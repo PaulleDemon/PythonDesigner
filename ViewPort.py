@@ -13,12 +13,21 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._isPanning = False
         self._mousePressed = False
         self._isdrawingPath = False
+        self._isCutting = False
 
         self._current_path = None
         self._item1 = None
         self._selected_items = set()
 
+        self._line_cutter_painterPath = None  # used to cut paths
+        self._line_cutter_path_item = None
+
         self._penWidth = 1.2
+
+        self._cutter_pen = QtGui.QPen()
+        self._cutter_pen.setColor(QtGui.QColor("#000000"))
+        self._cutter_pen.setWidthF(1.0)
+        self._cutter_pen.setDashPattern([3, 3])
 
         self._background_color = QtGui.QColor("#ffffff")
         self._grid_color = QtGui.QColor("#b0b0b0")
@@ -109,9 +118,10 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
+        pos = self.mapToScene(event.pos())
+
         if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
 
-            pos = self.mapToScene(event.pos())
             item = self.scene().itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
 
@@ -120,6 +130,13 @@ class ViewPort(QtWidgets.QGraphicsView):
                 self.scene().addItem(self._current_path)
                 self._item1 = item
                 return
+
+        if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.AltModifier:
+            self._line_cutter_painterPath = QtGui.QPainterPath(pos)
+            self._line_cutter_path_item = QtWidgets.QGraphicsPathItem()
+            self._line_cutter_path_item.setPen(self._cutter_pen)
+            self.scene().addItem(self._line_cutter_path_item)
+            self._isCutting = True
 
         if event.button() == QtCore.Qt.LeftButton:
             self._mousePressed = True
@@ -144,10 +161,17 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def mouseMoveEvent(self, event):
 
+        pos = self.mapToScene(event.pos())
+
         if self._isdrawingPath:
-            pos = self.mapToScene(event.pos())
+            # pos = self.mapToScene(event.pos())
             self._current_path.setDestinationPoints(pos)
             self.scene().update(self.sceneRect())
+            return
+
+        if self._isCutting:
+            self._line_cutter_painterPath.lineTo(pos)
+            self._line_cutter_path_item.setPath(self._line_cutter_painterPath)
             return
 
         if self._mousePressed and self._isPanning:
@@ -161,10 +185,31 @@ class ViewPort(QtWidgets.QGraphicsView):
         else:
             super(ViewPort, self).mouseMoveEvent(event)
 
+    def removeIntersectingPaths(self):
+
+        def filterInstances(items, instanceOf):
+            for item in items:
+                if isinstance(item, instanceOf):
+                    yield item
+
+        for item in filterInstances(self._line_cutter_path_item.collidingItems(), Path):
+            item.removeItem()
+
     def mouseReleaseEvent(self, event):
 
+        pos = self.mapToScene(event.pos())
+
+        if self._isCutting:
+
+            self.removeIntersectingPaths()
+
+            self.scene().removeItem(self._line_cutter_path_item)
+            self._line_cutter_painterPath = None
+            self._line_cutter_path_item = None
+            self._isCutting = False
+
         if self._isdrawingPath:
-            pos = self.mapToScene(event.pos())
+
             self._current_path.setZValue(-1)
             item = self.scene().itemAt(pos, QtGui.QTransform())
 

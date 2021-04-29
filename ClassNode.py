@@ -100,7 +100,7 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
-        self._path = dict()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+        self._path = set()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
 
         self._title = "Class: "
 
@@ -164,18 +164,20 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
             yield item.getDestinationNode()
 
     def addPath(self, path, source=False):  # add new path source specifies whether the Node is source or destination
-        self._path[path] = source
-        self._isSource=source
+        self._path.add(path)
 
     def removePath(self, path):  # remove path
-        self._path.pop(path)
+        self._path.remove(path)
+
+    def getPaths(self):
+        return self._path
 
     def updatePathPoints(self, path, source):
         if source:
             path.setSourcePoints()
 
     def itemChange(self, change, value):
-        for path in self._path.keys():
+        for path in self._path:
             path.updatePathPos()
 
         return super(ClassNode, self).itemChange(change, value)
