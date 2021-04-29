@@ -3,26 +3,29 @@ import math
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 
-
-EDGE_ROUNDNESS = 150     #: Bezier control point distance on the line
-WEIGHT_SOURCE = 0.2         #: factor for square edge to change the midpoint between start and end socket
+EDGE_ROUNDNESS = 150  #: Bezier control point distance on the line
+WEIGHT_SOURCE = 0.2  #: factor for square edge to change the midpoint between start and end socket
 
 DIRECT_PATH = 0
 BEZIER_PATH = 1
 SQUARE_PATH = 2
 
+SOURCE_HEADED = 0  # arrow type single headed means single arrow at the source
+DESTINATION_HEADED = 1  # arrow type single headed means single arrow at the destination
+DOUBLE_HEADED = 2  # double headed arrow type
+
 
 class Path(QtWidgets.QGraphicsPathItem):
-
     pathChanged = QtCore.pyqtSignal()
 
-    def __init__(self, source: QtCore.QPointF = None, destination: QtCore.QPointF = None, path_type = BEZIER_PATH,
-                *args, **kwargs):
+    def __init__(self, source: QtCore.QPointF = None, destination: QtCore.QPointF = None, path_type=BEZIER_PATH,
+                 *args, **kwargs):
 
         super(Path, self).__init__(*args, **kwargs)
 
         self._source = source
         self._destination = destination
+        self._arrow_type = DESTINATION_HEADED
 
         self._path_color = QtGui.QColor("#000000")
         self._selection_color = QtGui.QColor("#03a81c")
@@ -107,6 +110,14 @@ class Path(QtWidgets.QGraphicsPathItem):
     def setArrowProperties(self, height, width):
         self._arrow_height, self._arrow_width = height, width
 
+    def setArrowHead(self, head_type=DESTINATION_HEADED):
+
+        if head_type not in (SOURCE_HEADED, DESTINATION_HEADED, DOUBLE_HEADED):
+            raise ValueError(f"Unknown Head type '{head_type}'")
+
+        self._arrow_type = head_type
+        self.update(self.sceneBoundingRect())
+
     def hoverEnterEvent(self, event) -> None:
         self._hovered = True
         self.update(self.sceneBoundingRect())
@@ -129,12 +140,27 @@ class Path(QtWidgets.QGraphicsPathItem):
         square_path = QtWidgets.QAction("Square Path")
         square_path.triggered.connect(lambda: self.setPathType(SQUARE_PATH))
 
+        single_headed = QtWidgets.QAction("Single Head")
+        single_headed.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED))
+
+        double_headed = QtWidgets.QAction("Double Head")
+        double_headed.triggered.connect(lambda: self.setArrowHead(DOUBLE_HEADED))
+
+        invert_head = QtWidgets.QAction("Invert Head")
+        invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED) if self._arrow_type == DESTINATION_HEADED
+                                                                             else self.setArrowHead(DESTINATION_HEADED))
+
+        if self._arrow_type == DOUBLE_HEADED:
+            invert_head.setDisabled(True)
+
         menu.addActions([direct_path, bezier_path, square_path])
+        menu.addSeparator()
+        menu.addActions([single_headed, double_headed, invert_head])
 
         menu.exec(event.screenPos())
 
-    def arrowCalc(self, start_point=None, end_point=None, drawAT=1):
-        # if draw at is 1 then the arrow will be drawn at the end
+    def arrowCalc(self, start_point=None, end_point=None):  # calculates the point where the arrow should be drawn
+
         try:
             startPoint, endPoint = start_point, end_point
 
@@ -144,29 +170,27 @@ class Path(QtWidgets.QGraphicsPathItem):
             if endPoint is None:
                 endPoint = self.getDestinationPoints()
 
-            dx, dy = startPoint.x()-endPoint.x(), startPoint.y()-endPoint.y()
+            dx, dy = startPoint.x() - endPoint.x(), startPoint.y() - endPoint.y()
 
-            leng = math.sqrt(dx**2 + dy**2)
-            normX, normY = dx/leng, dy/leng  # normalize
+            leng = math.sqrt(dx ** 2 + dy ** 2)
+            normX, normY = dx / leng, dy / leng  # normalize
 
             # perpendicular vector
             perpX = -normY
             perpY = normX
 
-            end = startPoint if drawAT == 0 else endPoint
+            leftX = endPoint.x() + self._arrow_height * normX + self._arrow_width * perpX
+            leftY = endPoint.y() + self._arrow_height * normY + self._arrow_width * perpY
 
-            leftX = end.x() + self._arrow_height * normX + self._arrow_width * perpX
-            leftY = end.y() + self._arrow_height * normY + self._arrow_width * perpY
-
-            rightX = end.x() + self._arrow_height * normX - self._arrow_height * perpX
-            rightY = end.y() + self._arrow_height * normY - self._arrow_width * perpY
+            rightX = endPoint.x() + self._arrow_height * normX - self._arrow_height * perpX
+            rightY = endPoint.y() + self._arrow_height * normY - self._arrow_width * perpY
 
             point2 = QtCore.QPointF(leftX, leftY)
             point3 = QtCore.QPointF(rightX, rightY)
 
-            return QtGui.QPolygonF([point2,  end, point3])
+            return QtGui.QPolygonF([point2, endPoint, point3])
 
-        except ZeroDivisionError:
+        except (ZeroDivisionError, Exception):
             return None
 
     def calcPath(self):
@@ -202,15 +226,25 @@ class Path(QtWidgets.QGraphicsPathItem):
         painter.drawPath(path)
         self.setPath(path)
 
-        triangle = self.arrowCalc(path.pointAtPercent(0.9), self.getDestinationPoints())
-        # painter.drawPolygon(triangle)
-        if triangle is not  None:
-            painter.drawPolyline(triangle)
+        triangle_source = None
+        triangle_destination = None
+
+        if self._arrow_type in [DESTINATION_HEADED, DOUBLE_HEADED]:
+            triangle_destination = self.arrowCalc(path.pointAtPercent(0.9), self.getDestinationPoints())
+
+        if self._arrow_type in [SOURCE_HEADED, DOUBLE_HEADED]:
+            triangle_source = self.arrowCalc(path.pointAtPercent(0.1), self.getSourcePoints())
+
+        if triangle_source is not None:
+            painter.drawPolyline(triangle_source)
+
+        if triangle_destination is not None:
+            painter.drawPolyline(triangle_destination)
 
 
 class PathCalc:
 
-    def __init__(self, sourcePoints:QtCore.QPointF, destinationPoints:QtCore.QPointF, handle_weight = 0.5):
+    def __init__(self, sourcePoints: QtCore.QPointF, destinationPoints: QtCore.QPointF, handle_weight=0.5):
         self._sourcePoint = sourcePoints
         self._destinationPoint = destinationPoints
         self._handle_weight = handle_weight
@@ -254,13 +288,13 @@ class PathCalc:
             cpx_s *= -1
 
             cpy_d = (
-                        (source_y - destination_y) / math.fabs(
+                            (source_y - destination_y) / math.fabs(
                         (source_y - destination_y) if (source_y - destination_y) != 0 else 0.00001
                     )
                     ) * EDGE_ROUNDNESS
 
             cpy_s = (
-                        (destination_y - source_y) / math.fabs(
+                            (destination_y - source_y) / math.fabs(
                         (destination_y - source_y) if (destination_y - source_y) != 0 else 0.00001
                     )
                     ) * EDGE_ROUNDNESS

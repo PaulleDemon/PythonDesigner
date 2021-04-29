@@ -178,13 +178,9 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     def geometry(self):
 
         pos = self.scenePos()
-        # rect = self.mapToParent(self.boundingRect())
         scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(), pos.y() + self.sceneBoundingRect().height())
         x2, y2 = scenepos.x(), scenepos.y()
-        # x2 = rect.boundingRect().height() + pos.x()
-        # y2 = rect.boundingRect().height() + pos.y()
 
-        print("Width, height: ", x2, y2)
         return QtCore.QRectF(pos, QtCore.QPointF(x2, y2))
 
     def paint(self, painter, option, widget):
