@@ -23,8 +23,8 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         super(Path, self).__init__(*args, **kwargs)
 
-        self._source = source
-        self._destination = destination
+        self._sourcePoint = source
+        self._destinationPoint = destination
         self._arrow_type = DESTINATION_HEADED
 
         self._path_color = QtGui.QColor("#000000")
@@ -39,7 +39,7 @@ class Path(QtWidgets.QGraphicsPathItem):
         self._hovered = False
 
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
-        self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
+        # self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable)
 
         self.setAcceptHoverEvents(True)
@@ -47,7 +47,10 @@ class Path(QtWidgets.QGraphicsPathItem):
         self._arrow_height = 5
         self._arrow_width = 4
 
-        self.path_calc = PathCalc(self._source, self._destination)
+        self._sourceNode = None
+        self._destinationNode = None
+
+        self.path_calc = PathCalc(self._sourcePoint, self._destinationPoint)
 
     def pathColor(self):
         return self._path_color
@@ -80,26 +83,46 @@ class Path(QtWidgets.QGraphicsPathItem):
     PathWidth = pyqtProperty(float, penWidth, setPenWidth)
 
     def getSourcePoints(self):
-        return self._source
+        return self._sourcePoint
 
     def setSourcePoints(self, source: QtCore.QPointF):
-        self._source = source
+        self._sourcePoint = source
 
     def getDestinationPoints(self):
-        return self._destination
+        return self._destinationPoint
 
     def setDestinationPoints(self, destination: QtCore.QPointF):
-        self._destination = destination
+        self._destinationPoint = destination
+
+    def getSourceNode(self):
+        return self._sourceNode
+
+    def setSourceNode(self, node):
+        self._sourceNode = node
+
+    def getDestinationNode(self):
+        return self._destinationNode
+
+    def setDestinationNode(self, node):
+        self._destinationNode = node
 
     def setPathType(self, type=DIRECT_PATH):
 
         if type not in [DIRECT_PATH, BEZIER_PATH, SQUARE_PATH]:
             raise Exception(f"Invalid Path Type: {type}")
-            return
 
         self._path_type = type
         self.update(self.sceneBoundingRect())
         # self.pathChanged.emit()
+
+    def updatePathPos(self):
+        source_point = QtCore.QPointF(self._sourceNode.geometry().width() + 2, self._sourceNode.geometry().y() + 10)
+        destination_point = QtCore.QPointF(self._destinationNode.geometry().x() - 2, self._destinationNode.geometry().y() + 10)
+
+        self.setSourcePoints(source_point)
+        self.setDestinationPoints(destination_point)
+
+        # self.update(self.sceneBoundingRect())
 
     def setSquarePathHandleWeight(self, weight: float):
         self._handle_weight = weight

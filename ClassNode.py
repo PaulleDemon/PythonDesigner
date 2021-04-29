@@ -100,9 +100,7 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
-        self.setFlag(self.ItemIsMovable, True)
-        self.setFlag(self.ItemIsSelectable, True)
-        # self.setFlag(self.ItemIsFocusable, True)
+        self._path = dict()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
 
         self._title = "Class: "
 
@@ -115,7 +113,10 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self._title_rect = QtCore.QRectF(0, 0, 100, 30)
         self._body_rect = QtCore.QRectF(0, 30, 100, 100)
 
-        self.path = {}  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+        self.setFlag(self.ItemIsMovable, True)
+        self.setFlag(self.ItemIsSelectable, True)
+        self.setFlag(self.ItemSendsScenePositionChanges, True)
+        # self.setFlag(self.ItemIsFocusable, True)
 
         self.InitNode()
 
@@ -158,14 +159,22 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
-    def addPath(self, path, start=False):  # add new path
-        self.path[path] = start
+    def addPath(self, path, source=False):  # add new path source specifies whether the Node is source or destination
+        self._path[path] = source
 
     def removePath(self, path):  # remove path
-        self.path.pop(path)
+        self._path.pop(path)
+
+    def updatePathPoints(self, path, source):
+        if source:
+            path.setSourcePoints()
 
     def itemChange(self, change, value):
-        # print(f"Change: {change}; value: {value}")
+        # print("Keys: ", self._path)
+        for path in self._path.keys():
+            path.updatePathPos()
+            # self.updatePathPoints(path, source)
+
         return super(ClassNode, self).itemChange(change, value)
 
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:

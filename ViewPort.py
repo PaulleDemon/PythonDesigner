@@ -161,14 +161,20 @@ class ViewPort(QtWidgets.QGraphicsView):
                 if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
                     self._item1 = self._item1.parentItem()
 
-                source_point = QtCore.QPointF(self._item1.geometry().width()+2, self._item1.geometry().y()+10)
-                destination_point = QtCore.QPointF(item.geometry().x()-2, item.geometry().y()+10)
-
-                print("YES", self._item1, self._item1.geometry(), self._item1.pos(), self._item1.boundingRect())
+                # source_point = QtCore.QPointF(self._item1.geometry().width()+2, self._item1.geometry().y()+10)
+                # destination_point = QtCore.QPointF(item.geometry().x()-2, item.geometry().y()+10)
+                #
+                # print("YES", self._item1, self._item1.geometry(), self._item1.pos(), self._item1.boundingRect())
 
                 self._current_path.setZValue(1)
-                self._current_path.setSourcePoints(source_point)
-                self._current_path.setDestinationPoints(destination_point)
+                # self._current_path.setSourcePoints(source_point)
+                # self._current_path.setDestinationPoints(destination_point)
+                self._item1.addPath(self._current_path, True)
+                item.addPath(self._current_path, False)
+
+                self._current_path.setSourceNode(self._item1)
+                self._current_path.setDestinationNode(item)
+                self._current_path.updatePathPos()
 
 
             else:
