@@ -159,8 +159,13 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
+    def getDestination(self):
+         for item in self._path:
+            yield item.getDestinationNode()
+
     def addPath(self, path, source=False):  # add new path source specifies whether the Node is source or destination
         self._path[path] = source
+        self._isSource=source
 
     def removePath(self, path):  # remove path
         self._path.pop(path)
@@ -170,10 +175,8 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
             path.setSourcePoints()
 
     def itemChange(self, change, value):
-        # print("Keys: ", self._path)
         for path in self._path.keys():
             path.updatePathPos()
-            # self.updatePathPoints(path, source)
 
         return super(ClassNode, self).itemChange(change, value)
 

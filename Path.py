@@ -39,7 +39,6 @@ class Path(QtWidgets.QGraphicsPathItem):
         self._hovered = False
 
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
-        # self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable)
 
         self.setAcceptHoverEvents(True)
@@ -49,6 +48,7 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         self._sourceNode = None
         self._destinationNode = None
+        self._zValue = 0
 
         self.path_calc = PathCalc(self._sourcePoint, self._destinationPoint)
 
@@ -103,6 +103,9 @@ class Path(QtWidgets.QGraphicsPathItem):
     def getDestinationNode(self):
         return self._destinationNode
 
+    def getDefaultZvalue(self):
+        return self._zValue
+
     def setDestinationNode(self, node):
         self._destinationNode = node
 
@@ -113,7 +116,6 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         self._path_type = type
         self.update(self.sceneBoundingRect())
-        # self.pathChanged.emit()
 
     def updatePathPos(self):
         source_point = QtCore.QPointF(self._sourceNode.geometry().width() + 2, self._sourceNode.geometry().y() + 10)
@@ -121,8 +123,6 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         self.setSourcePoints(source_point)
         self.setDestinationPoints(destination_point)
-
-        # self.update(self.sceneBoundingRect())
 
     def setSquarePathHandleWeight(self, weight: float):
         self._handle_weight = weight
@@ -173,12 +173,30 @@ class Path(QtWidgets.QGraphicsPathItem):
         invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED) if self._arrow_type == DESTINATION_HEADED
                                                                              else self.setArrowHead(DESTINATION_HEADED))
 
+        def setZValue(parent, z: float) -> None:
+            parent.setZValue(z)
+            parent._zValue = z
+
+        on_top = QtWidgets.QAction("Stay on Top") # places the path on top
+        on_top.triggered.connect(lambda: setZValue(self, 1))
+
+        at_bottom = QtWidgets.QAction("Move to Bottom")
+        at_bottom.triggered.connect(lambda: setZValue(self, -1))
+
         if self._arrow_type == DOUBLE_HEADED:
             invert_head.setDisabled(True)
+
+        if self.zValue() == 1:
+            on_top.setDisabled(True)
+
+        if self.zValue() == -1:
+            at_bottom.setDisabled(True)
 
         menu.addActions([direct_path, bezier_path, square_path])
         menu.addSeparator()
         menu.addActions([single_headed, double_headed, invert_head])
+        menu.addSeparator()
+        menu.addActions([on_top, at_bottom])
 
         menu.exec(event.screenPos())
 

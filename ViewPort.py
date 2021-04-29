@@ -6,7 +6,7 @@ from Path import *
 
 
 class ViewPort(QtWidgets.QGraphicsView):
-    
+
     def __init__(self, *args, **kwargs):
         super(ViewPort, self).__init__(*args, **kwargs)
         self._zoom = 0
@@ -16,6 +16,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self._current_path = None
         self._item1 = None
+        self._selected_items = set()
 
         self._penWidth = 1.2
 
@@ -68,9 +69,25 @@ class ViewPort(QtWidgets.QGraphicsView):
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
 
+    def selectionChanged(self):  # moves all the selected items on top
+
+        for item in self._selected_items:
+            if isinstance(item, Path):
+                item.setZValue(item.getDefaultZvalue())
+
+            else:
+                item.setZValue(0)
+
+        self._selected_items = set()
+
+        for item in self.scene().selectedItems():
+            item.setZValue(1)
+            self._selected_items.add(item)
+
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)
         self.setBackground()
+        self.scene().selectionChanged.connect(self.selectionChanged)
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
 
@@ -153,7 +170,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
                                                                                         and self._item1 != item:
-                # self._current_path.setDestinationPoints(pos)
 
                 if isinstance(item, QtWidgets.QGraphicsProxyWidget):
                     item = item.parentItem()
@@ -161,21 +177,17 @@ class ViewPort(QtWidgets.QGraphicsView):
                 if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
                     self._item1 = self._item1.parentItem()
 
-                # source_point = QtCore.QPointF(self._item1.geometry().width()+2, self._item1.geometry().y()+10)
-                # destination_point = QtCore.QPointF(item.geometry().x()-2, item.geometry().y()+10)
-                #
-                # print("YES", self._item1, self._item1.geometry(), self._item1.pos(), self._item1.boundingRect())
+                if item in self._item1.getDestination():  # remove path if it is already pointing to same destination
+                    self.scene().removeItem(self._current_path)
+                    return
 
-                self._current_path.setZValue(1)
-                # self._current_path.setSourcePoints(source_point)
-                # self._current_path.setDestinationPoints(destination_point)
                 self._item1.addPath(self._current_path, True)
                 item.addPath(self._current_path, False)
 
                 self._current_path.setSourceNode(self._item1)
                 self._current_path.setDestinationNode(item)
                 self._current_path.updatePathPos()
-
+                self._current_path.setZValue(1)
 
             else:
                 self.scene().removeItem(self._current_path)
@@ -206,7 +218,3 @@ class ViewPort(QtWidgets.QGraphicsView):
     # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
     #     super(ViewPort, self).mouseDoubleClickEvent(event)
-
-
-class SceneView(QtWidgets.QGraphicsScene):
-    pass
