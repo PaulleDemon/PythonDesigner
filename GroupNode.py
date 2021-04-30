@@ -13,6 +13,8 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
         self.setFlag(self.ItemIsMovable, True)
         self.setFlag(self.ItemIsSelectable, True)
+
+        self.setCacheMode(self.ItemCoordinateCache)
         # self.setFlag(self.ItemIsFocusable, True)
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
@@ -26,49 +28,40 @@ class GroupNode(QtWidgets.QGraphicsItem):
         print("Delete Group: ", members)
         if members:
             print("deleting", self.group_members)
+
             for item in self.childItems():
                 print("hello,: ", item)
                 item.setParentItem(None)
+                # item.setPos(self.mapToScene(item.pos()))
+                item.setPos(item.scenePos())
                 self.removeItemFromGroup(item)
-                print("Done")
+                print("Done", item.pos(), self.pos())
 
-        print("No Problem: ", self.group_members)
-        print("children: ", self.childItems())
         self.scene().removeItem(self)
-        print()
+        del self
+
+    def pos(self) -> QtCore.QPointF:
+        return QtCore.QPointF(self.rect.x(), self.rect.y())
 
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu()
 
         delete_group = QtWidgets.QAction("Delete Group")
-        delete_group.triggered.connect(self.deleteGroup)
+        delete_group.triggered.connect(lambda: self.deleteGroup(True))
 
         delete_groupMembers = QtWidgets.QAction("Delete Group and Members")
-        delete_groupMembers.triggered.connect(lambda: self.deleteGroup(True))
+        delete_groupMembers.triggered.connect(self.deleteGroup)
 
         menu.addActions([delete_group, delete_groupMembers])
         menu.exec(event.screenPos())
-
-    # todo: not working as expected
-
-    # def boundingRect(self) -> QtCore.QRectF:
-    #     # rect = self.rect
-    #     # for item in self.group_members:
-    #     #     if isinstance(item, ClassNode.ClassNode):
-    #     #         # rect = rect.united(item.boundingRect())
-    #     #         rect = QtCore.QRectF(rect.x(), rect.y(), item.boundingRect().width()+rect.x(), item.boundingRect().height()+rect.y())
-    #
-    #     # self.rect = self.mapToScene(rect).boundingRect().marginsAdded(QtCore.QMarginsF(20, 50, 20, 20)) if rect != QtCore.QRectF(0, 0, 0, 0) else self.rect
-    #     # rect = rect.marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
-    #
-    #     # self.rect = QtCore.QRectF(self.rect.x(), self.rect.y(), rect.width()+self.rect.x(), rect.height()+self.rect.y())
-    #     self.rect = self.childrenBoundingRect().marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
-    #     return self.rect
     
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         super(GroupNode, self).mousePressEvent(event)
     
     def boundingRect(self) -> QtCore.QRectF:
+        if self.childrenBoundingRect() == QtCore.QRectF():
+            self.scene().removeItem(self)
+
         self.rect = self.childrenBoundingRect().marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
         return self.rect
 
