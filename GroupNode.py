@@ -22,23 +22,22 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
     def removeItemFromGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.discard(item)
-        print("Group members: ", self.group_members)
 
     def deleteGroup(self, members=False):  # if members is True then children will also get deleted
-        print("Delete Group: ", members)
-        if members:
-            print("deleting", self.group_members)
 
+        if members:
             for item in self.childItems():
-                print("hello,: ", item)
+                item.removeConnectedPaths()
+
+        else:
+            for item in self.childItems():
+                print(item)
                 item.setParentItem(None)
-                # item.setPos(self.mapToScene(item.pos()))
+                item.removeConnectedPaths
                 item.setPos(item.scenePos())
                 self.removeItemFromGroup(item)
-                print("Done", item.pos(), self.pos())
 
         self.scene().removeItem(self)
-        del self
 
     def pos(self) -> QtCore.QPointF:
         return QtCore.QPointF(self.rect.x(), self.rect.y())
@@ -47,10 +46,10 @@ class GroupNode(QtWidgets.QGraphicsItem):
         menu = QtWidgets.QMenu()
 
         delete_group = QtWidgets.QAction("Delete Group")
-        delete_group.triggered.connect(lambda: self.deleteGroup(True))
+        delete_group.triggered.connect(self.deleteGroup)
 
         delete_groupMembers = QtWidgets.QAction("Delete Group and Members")
-        delete_groupMembers.triggered.connect(self.deleteGroup)
+        delete_groupMembers.triggered.connect(lambda: self.deleteGroup(True))
 
         menu.addActions([delete_group, delete_groupMembers])
         menu.exec(event.screenPos())

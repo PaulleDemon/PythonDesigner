@@ -217,8 +217,8 @@ class ViewPort(QtWidgets.QGraphicsView):
     def removeIntersectingPaths(self):
 
         def filterInstances(items, instanceOf):
-            for item in items:
-                if isinstance(item, instanceOf):
+            for _item in items:
+                if isinstance(_item, instanceOf):
                     yield item
 
         for item in filterInstances(self._line_cutter_path_item.collidingItems(), Path):
@@ -268,7 +268,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             self._current_path.setZValue(-3)
             item = self._scene.itemAt(pos, QtGui.QTransform())
-            print("items: ", item)
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
                                                                                         and self._item1 != item:
@@ -281,8 +280,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
                 if item in self._item1.getDestination():  # remove path if it is already pointing to same destination
                     self._scene.removeItem(self._current_path)
-                    print("Removed")
-
 
                 self._item1.addPath(self._current_path)
                 item.addPath(self._current_path)
@@ -294,7 +291,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             else:
                 self._scene.removeItem(self._current_path)
-                print("removed")
 
             self._item1 = None
             self._scene.update(self.sceneRect())

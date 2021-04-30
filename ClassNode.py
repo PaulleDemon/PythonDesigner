@@ -97,6 +97,8 @@ class Container(QtWidgets.QWidget):
 
 class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no widget is there
 
+    geomertyChanged = QtCore.pyqtSignal()
+
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
@@ -118,6 +120,8 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self.setFlag(self.ItemSendsScenePositionChanges, True)
         self.setFlag(self.ItemSendsGeometryChanges, True)
         # self.setFlag(self.ItemIsFocusable, True)
+
+        self.proxy_geometry_old = None
 
         self.InitNode()
 
@@ -171,7 +175,7 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self._path.add(path)
 
     def removePath(self, path):  # remove path
-        self._path.remove(path)
+        self._path.discard(path)
 
     def getPaths(self):
         return self._path
@@ -180,12 +184,17 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         if source:
             path.setSourcePoints()
 
+    def removeConnectedPaths(self):
+        paths = self._path.copy()  # to make sure that the _path set is not changed during the iteration
+        for path in paths:
+            path.removeItem()
+
     def itemChange(self, change, value):
         for path in self._path:
             path.updatePathPos()
 
         return super(ClassNode, self).itemChange(change, value)
-    
+
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.proxy.mouseDoubleClickEvent(event)
         super(ClassNode, self).mouseDoubleClickEvent(event)
@@ -194,7 +203,6 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         return self.proxy.boundingRect()
 
     def geometry(self):
-
         pos = self.scenePos()
         scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(), pos.y() + self.sceneBoundingRect().height())
         x2, y2 = scenepos.x(), scenepos.y()
@@ -214,5 +222,5 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
 
         painter.restore()
 
-
-
+        for path in self._path:
+            path.updatePathPos()
