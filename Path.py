@@ -118,11 +118,23 @@ class Path(QtWidgets.QGraphicsPathItem):
         self.update(self.sceneBoundingRect())
 
     def updatePathPos(self):
-        source_point = QtCore.QPointF(self._sourceNode.geometry().width() + 2, self._sourceNode.geometry().y() + 10)
-        destination_point = QtCore.QPointF(self._destinationNode.geometry().x() - 2, self._destinationNode.geometry().y() + 10)
+
+        if self._arrow_type == DOUBLE_HEADED:
+            source_point = QtCore.QPointF(self._sourceNode.geometry().width() + 2, self._sourceNode.geometry().y() + 10)
+            destination_point = QtCore.QPointF(self._destinationNode.geometry().x() - 2, self._destinationNode.geometry().y() + 10)
+
+        else:
+            x = self._sourceNode.geometry().width()-self._sourceNode.boundingRect().width()/2
+            y = self._sourceNode.geometry().height()+2
+
+            x1 = self._destinationNode.geometry().width()-self._sourceNode.boundingRect().width()/2
+            y1 = self._destinationNode.geometry().y()
+            source_point = QtCore.QPointF(x,y)
+            destination_point = QtCore.QPointF(x1, y1)
 
         self.setSourcePoints(source_point)
         self.setDestinationPoints(destination_point)
+
 
     def setSquarePathHandleWeight(self, weight: float):
         self._handle_weight = weight
@@ -188,6 +200,9 @@ class Path(QtWidgets.QGraphicsPathItem):
         at_bottom = QtWidgets.QAction("Move to Bottom")
         at_bottom.triggered.connect(lambda: setZValue(self, -1))
 
+        remove_path = QtWidgets.QAction("Delete Path")
+        remove_path.triggered.connect(self.removeItem)
+
         if self._arrow_type == DOUBLE_HEADED:
             invert_head.setDisabled(True)
 
@@ -202,6 +217,8 @@ class Path(QtWidgets.QGraphicsPathItem):
         menu.addActions([single_headed, double_headed, invert_head])
         menu.addSeparator()
         menu.addActions([on_top, at_bottom])
+        menu.addSeparator()
+        menu.addAction(remove_path)
 
         menu.exec(event.screenPos())
 

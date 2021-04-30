@@ -116,6 +116,7 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self.setFlag(self.ItemIsMovable, True)
         self.setFlag(self.ItemIsSelectable, True)
         self.setFlag(self.ItemSendsScenePositionChanges, True)
+        self.setFlag(self.ItemSendsGeometryChanges, True)
         # self.setFlag(self.ItemIsFocusable, True)
 
         self.InitNode()
@@ -163,7 +164,10 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
          for item in self._path:
             yield item.getDestinationNode()
 
-    def addPath(self, path, source=False):  # add new path source specifies whether the Node is source or destination
+    def isSource(self):
+        return self._isSource
+
+    def addPath(self, path):  # add new path
         self._path.add(path)
 
     def removePath(self, path):  # remove path
@@ -181,7 +185,7 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
             path.updatePathPos()
 
         return super(ClassNode, self).itemChange(change, value)
-
+    
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.proxy.mouseDoubleClickEvent(event)
         super(ClassNode, self).mouseDoubleClickEvent(event)

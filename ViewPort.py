@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 
+import GroupNode
 from ClassNode import ClassNode
 from Path import *
 
@@ -9,11 +10,19 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def __init__(self, *args, **kwargs):
         super(ViewPort, self).__init__(*args, **kwargs)
+
+        self._scene = None
+
         self._zoom = 0
         self._isPanning = False
         self._mousePressed = False
         self._isdrawingPath = False
         self._isCutting = False
+        self._isdrawingGroupRect = False
+
+        self._groupRectangleStartPos = None
+        self._groupRectangle = None
+        self._groupRectangleBgBrush = QtGui.QBrush(QtGui.QColor(128, 125, 125, 50))
 
         self._current_path = None
         self._item1 = None
@@ -40,7 +49,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.setViewportUpdateMode(self.FullViewportUpdate)
         self.setDragMode(self.RubberBandDrag)
-        # self.setRenderHints(QtGui.QPainter.SmoothPixmapTransform)
 
         self.setObjectName("View")
 
@@ -81,20 +89,17 @@ class ViewPort(QtWidgets.QGraphicsView):
     def selectionChanged(self):  # moves all the selected items on top
 
         for item in self._selected_items:
-            if isinstance(item, Path):
-                item.setZValue(item.getDefaultZvalue())
-
-            else:
-                item.setZValue(0)
+            item.setZValue(item.zValue()-1)
 
         self._selected_items = set()
 
         for item in self.scene().selectedItems():
-            item.setZValue(1)
+            item.setZValue(item.zValue()+1)
             self._selected_items.add(item)
 
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)
+        self._scene = scene
         self.setBackground()
         self.scene().selectionChanged.connect(self.selectionChanged)
 
@@ -120,6 +125,26 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         pos = self.mapToScene(event.pos())
 
+        if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ShiftModifier:
+            item = self.scene().itemAt(pos, QtGui.QTransform())
+
+            if item:
+                if isinstance(item, QtWidgets.QGraphicsProxyWidget):
+                    item = item.parentItem()
+
+                item.setSelected(True)
+
+            return
+
+        if event.button() & QtCore.Qt.RightButton:
+            self._groupRectangle = QtWidgets.QGraphicsRectItem()
+            self._groupRectangle.setBrush(self._groupRectangleBgBrush)
+            self.scene().addItem(self._groupRectangle)
+            self._groupRectangle.setZValue(2)
+            self._isdrawingGroupRect = True
+            self._groupRectangleStartPos = pos
+            return
+
         if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
 
             item = self.scene().itemAt(pos, QtGui.QTransform())
@@ -144,7 +169,6 @@ class ViewPort(QtWidgets.QGraphicsView):
             if self._isPanning:
                 self.viewport().setCursor(QtCore.Qt.ClosedHandCursor)
                 self._dragPos = event.pos()
-
                 event.accept()
 
             else:
@@ -163,8 +187,11 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         pos = self.mapToScene(event.pos())
 
+        if self._isdrawingGroupRect:
+            self._groupRectangle.setRect(QtCore.QRectF(self._groupRectangleStartPos, pos))
+            return
+
         if self._isdrawingPath:
-            # pos = self.mapToScene(event.pos())
             self._current_path.setDestinationPoints(pos)
             self.scene().update(self.sceneRect())
             return
@@ -199,6 +226,38 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         pos = self.mapToScene(event.pos())
 
+        if self._isdrawingGroupRect:
+
+            group = GroupNode.GroupNode(self._groupRectangle.rect())
+            colliding_items = self._groupRectangle.collidingItems()
+
+            if colliding_items:
+                for item in colliding_items:
+
+                    if type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
+
+                        if isinstance(item, QtWidgets.QGraphicsProxyWidget):
+                            item = item.parentItem()
+
+                        item.setParentItem(group)
+                        group.addToGroup(item)
+
+                group.setZValue(-2)
+                self.scene().addItem(group)
+
+            else:
+                self.scene().removeItem(group)
+
+            print("Mouse released")
+
+            self.scene().removeItem(self._groupRectangle)
+
+            self._groupRectangle = None
+            self._isdrawingGroupRect = False
+            self._groupRectangleStartPos = None
+
+            return
+
         if self._isCutting:
 
             self.removeIntersectingPaths()
@@ -226,8 +285,8 @@ class ViewPort(QtWidgets.QGraphicsView):
                     self.scene().removeItem(self._current_path)
                     return
 
-                self._item1.addPath(self._current_path, True)
-                item.addPath(self._current_path, False)
+                self._item1.addPath(self._current_path)
+                item.addPath(self._current_path)
 
                 self._current_path.setSourceNode(self._item1)
                 self._current_path.setDestinationNode(item)
@@ -258,7 +317,6 @@ class ViewPort(QtWidgets.QGraphicsView):
             self.viewport().unsetCursor()
 
         super(ViewPort, self).mouseReleaseEvent(event)
-
 
     # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)

@@ -16,11 +16,13 @@ def main():
 
         cls = ClassNode()
         cls2 = ClassNode()
+        cls3 = ClassNode()
         # path = DirectPath()
 
         scene = QtWidgets.QGraphicsScene()
         scene.addItem(cls)
         scene.addItem(cls2)
+        scene.addItem(cls3)
         # scene.addItem(path)
 
         view.setScene(scene)
