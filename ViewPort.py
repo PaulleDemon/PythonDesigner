@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 
+import ButtonGroup
 import GroupNode
 from ClassNode import ClassNode
 from Path import *
@@ -52,6 +53,22 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setDragMode(self.RubberBandDrag)
 
         self.setObjectName("View")
+        self.initUI()
+
+    def initUI(self):
+
+        self.btnGrp = ButtonGroup.ButtonGroup(ButtonGroup.VERTICAL_LAYOUT, parent=self)
+
+        btn1 = QtWidgets.QPushButton(text="hi")
+        btn1.setFixedSize(50, 50)
+
+        self.btnGrp.addToGroup(btn1)
+        self.btnGrp.move(QtCore.QPoint(10, 50))
+
+        self.btnGrp_pos = self.btnGrp.geometry().topLeft()
+        # btnGrp.addToGroup(btn)
+        print("Btn: ", self.btnGrp_pos)
+
 
     def bgColor(self):
         return self._background_color
@@ -72,7 +89,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def setPenWidth(self, width: float):
         self._penWidth = width
-        print("PEN WIDTH: ", width)
         self.setBackground()
 
     def setBackground(self):
@@ -95,9 +111,24 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._selected_items = set()
 
         for item in self.scene().selectedItems():
-
-            item.setZValue(item.defaultZValue+1)
+            item.setZValue(item.defaultZValue + 1)
             self._selected_items.add(item)
+
+    def toggleToolBar(self):
+        self.anim = QtCore.QPropertyAnimation(self.btnGrp, b"pos")
+
+        if self.btnGrp.isVisible():
+            self.anim.setStartValue(self.btnGrp_pos)
+            self.anim.setEndValue(QtCore.QPointF(-100, self.btnGrp_pos.y()))
+
+        else:
+            self.anim.setStartValue(QtCore.QPointF(-100, self.btnGrp_pos.y()))
+            self.anim.setEndValue(self.btnGrp_pos)
+            print("YES")
+
+        self.anim.setDuration(100)
+        self.anim.finished.connect(lambda: self.btnGrp.hide() if self.btnGrp.isVisible() else self.btnGrp.show())
+        self.anim.start(self.anim.DeleteWhenStopped)
 
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)
@@ -106,16 +137,21 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
 
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        print("Focus: ", self.focusWidget())
+        if event.key() & QtCore.Qt.Key_T and self.hasFocus():
+            self.toggleToolBar()
+
     def wheelEvent(self, event: QtGui.QWheelEvent):
 
         if self.transform().m11() >= 2 or self.transform().m11() < 0.5:
             self.resetTransform()
 
-        if event.angleDelta().y() > 0 and self._zoom <3:
+        if event.angleDelta().y() > 0 and self._zoom < 3:
             factor = 1.25
             self._zoom += 1
 
-        elif event.angleDelta().y() < 0 and self._zoom >-2:
+        elif event.angleDelta().y() < 0 and self._zoom > -2:
             factor = 0.8
             self._zoom -= 1
 
@@ -152,7 +188,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             item = self._scene.itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
-
                 self._isdrawingPath = True
                 self._current_path = Path(source=pos, destination=pos)
                 self._scene.addItem(self._current_path)
@@ -258,7 +293,6 @@ class ViewPort(QtWidgets.QGraphicsView):
             return
 
         if self._isCutting:
-
             self.removeIntersectingPaths()
 
             self._scene.removeItem(self._line_cutter_path_item)
@@ -272,7 +306,7 @@ class ViewPort(QtWidgets.QGraphicsView):
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
-                                                                                        and self._item1 != item:
+                    and self._item1 != item:
 
                 if isinstance(item, QtWidgets.QGraphicsProxyWidget):
                     item = item.parentItem()

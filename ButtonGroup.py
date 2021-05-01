@@ -7,7 +7,6 @@ GRID_LAYOUT = 2
 
 
 class ButtonGroup(QtWidgets.QWidget):
-
     layouts = {VERTICAL_LAYOUT: QtWidgets.QVBoxLayout, HORIZONTAL_LAYOUT: QtWidgets.QHBoxLayout,
                GRID_LAYOUT: QtWidgets.QGridLayout}
 
@@ -27,12 +26,13 @@ class ButtonGroup(QtWidgets.QWidget):
 
         self.currentSelectedBtn = None
 
-    def addToGroup(self, btn: QtWidgets.QPushButton = None, text='', icon=QtGui.QIcon(None), **kwargs):
+    def addToGroup(self, btn: QtWidgets.QPushButton = None, text: str = '', icon: QtGui.QIcon = QtGui.QIcon(None),
+                   **kwargs) -> QtWidgets.QPushButton:
 
         options = {'alignment': QtCore.Qt.Alignment(),
                    'row': 0,
                    'column': 0,
-                   'rowSpan':1,
+                   'rowSpan': 1,
                    'columnSpan': 1
                    }
 
@@ -48,13 +48,14 @@ class ButtonGroup(QtWidgets.QWidget):
         btn.toggled.connect(self.toggled)
 
         if self.layout_type == GRID_LAYOUT:
-            self.group_layout.add(btn).addItem(btn, options.pop('row'), options.pop('column'),
-                                               options.pop('rowSpan'), options.pop('columnspan'),
-                                               options.pop('alignment'))
+            self.group_layout.addWidget(btn, options.pop('row'), options.pop('column'),
+                                        options.pop('rowSpan'), options.pop('columnSpan'),
+                                        options.pop('alignment'))
 
         else:
             self.group_layout.addWidget(btn, alignment=options.pop('alignment'))
 
+        return btn
 
     def toggled(self):
 
@@ -62,23 +63,3 @@ class ButtonGroup(QtWidgets.QWidget):
             self.currentSelectedBtn.setChecked(False)
 
         self.currentSelectedBtn = self.sender()
-
-
-def main():
-    if __name__ == "__main__":
-        app = QtWidgets.QApplication(sys.argv)
-
-        btn = ButtonGroup(VERTICAL_LAYOUT)
-
-        btn.addToGroup(text="Hello")
-        btn.addToGroup(text="Bye2")
-        btn.addToGroup(text="Bye3")
-        btn.addToGroup(text="Bye4")
-
-        btn.show()
-
-        sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()
