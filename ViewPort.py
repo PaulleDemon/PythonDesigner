@@ -90,12 +90,13 @@ class ViewPort(QtWidgets.QGraphicsView):
     def selectionChanged(self):  # moves all the selected items on top
 
         for item in self._selected_items:
-            item.setZValue(item.zValue()-1)
+            item.setZValue(item.defaultZValue)
 
         self._selected_items = set()
 
         for item in self.scene().selectedItems():
-            item.setZValue(item.zValue()+1)
+
+            item.setZValue(item.defaultZValue+1)
             self._selected_items.add(item)
 
     def setScene(self, scene) -> None:
@@ -219,7 +220,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         def filterInstances(items, instanceOf):
             for _item in items:
                 if isinstance(_item, instanceOf):
-                    yield item
+                    yield _item
 
         for item in filterInstances(self._line_cutter_path_item.collidingItems(), Path):
             item.removeItem()
@@ -244,9 +245,10 @@ class ViewPort(QtWidgets.QGraphicsView):
                         item.setParentItem(group)
                         group.addToGroup(item)
 
-                group.setZValue(-2)
+                group.setZValue(group.defaultZValue)
                 self._scene.addItem(group)
 
+                print("ItemsZ Value: ", [[y.zValue() for y in x.getPaths()] for x in group.childItems()])
             self._scene.removeItem(self._groupRectangle)
 
             self._groupRectangle = None
@@ -266,7 +268,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         if self._isdrawingPath:
 
-            self._current_path.setZValue(-3)
+            self._current_path.setZValue(-1)
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
@@ -287,7 +289,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 self._current_path.setSourceNode(self._item1)
                 self._current_path.setDestinationNode(item)
                 self._current_path.updatePathPos()
-                self._current_path.setZValue(1)
+                self._current_path.setZValue(self._current_path.defaultZValue)
 
             else:
                 self._scene.removeItem(self._current_path)

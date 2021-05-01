@@ -105,6 +105,7 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self._path = set()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
 
         self._title = "Class: "
+        self.defaultZValue = 0
 
         self._border_color = QtGui.QColor("#959596")
         self._selection_color = QtGui.QColor("#6868d4")
@@ -122,6 +123,8 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         # self.setFlag(self.ItemIsFocusable, True)
 
         self.proxy_geometry_old = None
+
+        self.setZValue(self.defaultZValue)
 
         self.InitNode()
 

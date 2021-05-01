@@ -1,7 +1,5 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 
-import ClassNode
-
 
 class GroupNode(QtWidgets.QGraphicsItem):
 
@@ -15,6 +13,9 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.setFlag(self.ItemIsSelectable, True)
 
         self.setCacheMode(self.ItemCoordinateCache)
+
+        self.defaultZValue = -3
+
         # self.setFlag(self.ItemIsFocusable, True)
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):

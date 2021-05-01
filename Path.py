@@ -14,6 +14,8 @@ SOURCE_HEADED = 0  # arrow type single headed means single arrow at the source
 DESTINATION_HEADED = 1  # arrow type single headed means single arrow at the destination
 DOUBLE_HEADED = 2  # double headed arrow type
 
+zValue = 0
+
 
 class Path(QtWidgets.QGraphicsPathItem):
     pathChanged = QtCore.pyqtSignal()
@@ -48,7 +50,8 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         self._sourceNode = None
         self._destinationNode = None
-        self._zValue = 0
+
+        self.defaultZValue = 2
 
         self.path_calc = PathCalc(self._sourcePoint, self._destinationPoint)
 
@@ -104,7 +107,7 @@ class Path(QtWidgets.QGraphicsPathItem):
         return self._destinationNode
 
     def getDefaultZvalue(self):
-        return self._zValue
+        return self.defaultZValue
 
     def setDestinationNode(self, node):
         self._destinationNode = node
@@ -128,13 +131,12 @@ class Path(QtWidgets.QGraphicsPathItem):
             y = self._sourceNode.geometry().height()+2
 
             x1 = self._destinationNode.geometry().width()-self._sourceNode.boundingRect().width()/2
-            y1 = self._destinationNode.geometry().y()
-            source_point = QtCore.QPointF(x,y)
+            y1 = self._destinationNode.geometry().y()-2
+            source_point = QtCore.QPointF(x, y)
             destination_point = QtCore.QPointF(x1, y1)
 
         self.setSourcePoints(source_point)
         self.setDestinationPoints(destination_point)
-
 
     def setSquarePathHandleWeight(self, weight: float):
         self._handle_weight = weight
@@ -169,6 +171,10 @@ class Path(QtWidgets.QGraphicsPathItem):
         super(Path, self).hoverLeaveEvent(event)
 
     def contextMenuEvent(self, event) -> None:
+
+        if self.isSelected():
+            return
+
         menu = QtWidgets.QMenu()
 
         direct_path = QtWidgets.QAction("Direct Path")
@@ -192,10 +198,10 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         def setZValue(parent, z: float) -> None:
             parent.setZValue(z)
-            parent._zValue = z
+            parent.defaultZValue = z
 
         on_top = QtWidgets.QAction("Stay on Top") # places the path on top
-        on_top.triggered.connect(lambda: setZValue(self, 1))
+        on_top.triggered.connect(lambda: setZValue(self, 2))
 
         at_bottom = QtWidgets.QAction("Move to Bottom")
         at_bottom.triggered.connect(lambda: setZValue(self, -1))
@@ -205,8 +211,8 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         if self._arrow_type == DOUBLE_HEADED:
             invert_head.setDisabled(True)
-
-        if self.zValue() == 1:
+        print("Z Value: ", self.zValue())
+        if self.zValue() == 2:
             on_top.setDisabled(True)
 
         if self.zValue() == -1:
