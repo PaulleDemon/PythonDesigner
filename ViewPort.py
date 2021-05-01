@@ -138,9 +138,13 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._scene.setItemIndexMethod(self._scene.NoIndex)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-        print("Focus: ", self.focusWidget())
-        if event.key() & QtCore.Qt.Key_T and self.hasFocus():
+        print("FocusItem: ", self.scene().focusItem())
+
+        if event.key() & QtCore.Qt.Key_T and not self._scene.focusItem():
             self.toggleToolBar()
+        
+        else:
+            super(ViewPort, self).keyPressEvent(event)
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
 

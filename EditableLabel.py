@@ -6,10 +6,11 @@ class EditableLabel(QtWidgets.QWidget):
     deleted = QtCore.pyqtSignal()
     textChanged = QtCore.pyqtSignal()
 
-    def __init__(self, text="", placeHolder="class name", *args, **kwargs):
+    def __init__(self, text="", placeHolder="class name", defaultText:str="", *args, **kwargs):
         super(EditableLabel, self).__init__(*args, **kwargs)
 
         self._text = text
+        self.defaultText = defaultText
         self._toolTipHeading = ""
 
         self.hlayout = QtWidgets.QHBoxLayout(self)
@@ -25,7 +26,7 @@ class EditableLabel(QtWidgets.QWidget):
         self._edit_label.textChanged.connect(self._textChanged)
         self._edit_label.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
         self._edit_label.editingFinished.connect(self.showLabel)
-        self._edit_label.setText(text)
+        self._edit_label.setText(self._text) if self._text else self._edit_label.setText(self.defaultText)
         self._edit_label.setPlaceholderText(placeHolder)
 
         self.vlayout.addWidget(self._label)
@@ -54,6 +55,9 @@ class EditableLabel(QtWidgets.QWidget):
             self._edit_label.show()
             self._edit_label.setText(self._label.text())
             self._edit_label.selectAll()
+
+            if self._edit_label.text() == self.defaultText:
+                self._edit_label.selectAll()
 
             self._edit_label.setFocus()
             super(EditableLabel, self).mouseDoubleClickEvent(event)
@@ -84,10 +88,10 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
     _types = {"I": "Instance", "C": "Class", "S": "Static"}
     _member_types = {0: "Variable", 1: "Method"}
 
-    def __init__(self, type=0, text="", placeHolder="class name", *args, **kwargs):
+    def __init__(self, mem_type=0, text="", placeHolder="class name", *args, **kwargs):
         super(ClassType, self).__init__(text, placeHolder, *args, **kwargs)
 
-        self.member_type = self._member_types[type]
+        self.member_type = self._member_types[mem_type]
         self.type = "I"
         self.comment = ""
 

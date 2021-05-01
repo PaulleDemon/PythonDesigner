@@ -28,7 +28,7 @@ class Container(QtWidgets.QWidget):
         self.title_layout.setContentsMargins(2, 2, 2, 2)
         self.body_layout.setContentsMargins(2, 2, 2, 2)
 
-        self.class_title = EditableLabel("Class Name")
+        self.class_title = EditableLabel(defaultText="Class Name")
         self.class_title.enableToolTip("Class Name")
         self.class_title.setValidator()
 
@@ -69,19 +69,17 @@ class Container(QtWidgets.QWidget):
         self.title_frame.setFixedHeight(height)
 
     def addVariableName(self):
-        var = ClassType(parent=self, placeHolder="Variable Name")
+        var = ClassType(parent=self, placeHolder="Variable Name", defaultText="Variable Name")
         var.setValidator()
 
-        var.setText("Variable Name")
         var.setMinimumHeight(30)
         var.deleted.connect(self.adjust)
         self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
     def addMethodName(self):
-        var = ClassType(parent=self, placeHolder="Method Name", type=1)
+        var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
         var.setValidator()
 
-        var.setText("Method Name")
         var.setMinimumHeight(30)
         var.deleted.connect(self.adjust)
         self.method_layout.insertRow(self.method_layout.count() - 1, var)
