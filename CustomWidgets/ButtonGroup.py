@@ -17,6 +17,7 @@ class ButtonGroup(QtWidgets.QWidget):
         self._fixedSize = False
 
         self.default_btn = None
+        self.current_btnIndex = 0
         self.btn_size = QtCore.QSize()
 
         try:
@@ -67,12 +68,27 @@ class ButtonGroup(QtWidgets.QWidget):
             btn.setChecked(True)
             self.default_btn = btn
             self.currentSelectedBtn = btn
+            self.current_btnIndex = self.group_layout.indexOf(btn)
 
         if self._fixedSize:
             btn.setFixedSize(self.btn_size)
             btn.setIconSize(QtCore.QSize(self.btn_size.width()-10, self.btn_size.height()-10))
 
         return btn
+
+    def focusNext(self):
+
+        try:
+            self.group_layout.itemAt(self.current_btnIndex).widget().setChecked(False)
+            if self.current_btnIndex == self.group_layout.count()-1:
+                self.current_btnIndex = 0
+            else:
+                self.current_btnIndex += 1
+            print("COUNT; ", self.current_btnIndex, self.group_layout.count())
+            self.group_layout.itemAt(self.current_btnIndex).widget().setChecked(True)
+
+        except Exception:
+            pass
 
     def clicked(self):
 

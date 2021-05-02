@@ -80,7 +80,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tool")
 
 
-
     def bgColor(self):
         return self._background_color
 
@@ -155,6 +154,9 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         if event.key() & QtCore.Qt.Key_T and not self._scene.focusItem():
             self.toggleToolBar()
+
+        if event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.btnGrp.focusNext()
         
         else:
             super(ViewPort, self).keyPressEvent(event)
@@ -182,6 +184,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         pos = self.mapToScene(event.pos())
 
         if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ShiftModifier:
+            # enables multiple selection using shift
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item:
@@ -189,7 +192,6 @@ class ViewPort(QtWidgets.QGraphicsView):
                     item = item.parentItem()
 
                 item.setSelected(True)
-
             return
 
         if event.button() & QtCore.Qt.RightButton:
@@ -201,7 +203,7 @@ class ViewPort(QtWidgets.QGraphicsView):
             self._groupRectangleStartPos = pos
             return
 
-        if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
+        if self.current_mode == CONNECT_MODE:
 
             item = self._scene.itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
@@ -211,7 +213,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 self._item1 = item
                 return
 
-        if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.AltModifier:
+        if self.current_mode == CUT_MODE:
             self._line_cutter_painterPath = QtGui.QPainterPath(pos)
             self._line_cutter_path_item = QtWidgets.QGraphicsPathItem()
             self._line_cutter_path_item.setPen(self._cutter_pen)
