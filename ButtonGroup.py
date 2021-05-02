@@ -1,4 +1,3 @@
-import sys
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 VERTICAL_LAYOUT = 0
@@ -15,6 +14,8 @@ class ButtonGroup(QtWidgets.QWidget):
 
         self.group_layout = None
         self.layout_type = layout
+        self._fixedSize = False
+        self.btn_size = QtCore.QSize()
 
         try:
             self.group_layout = ButtonGroup.layouts[layout]()
@@ -29,11 +30,12 @@ class ButtonGroup(QtWidgets.QWidget):
     def addToGroup(self, btn: QtWidgets.QPushButton = None, text: str = '', icon: QtGui.QIcon = QtGui.QIcon(None),
                    **kwargs) -> QtWidgets.QPushButton:
 
-        options = {'alignment': QtCore.Qt.Alignment(),
-                   'row': 0,
-                   'column': 0,
-                   'rowSpan': 1,
-                   'columnSpan': 1
+        options = {"toolTip": "",
+                   "alignment": QtCore.Qt.Alignment(),
+                   "row": 0,
+                   "column": 0,
+                   "rowSpan": 1,
+                   "columnSpan": 1
                    }
 
         if not set(kwargs.keys()).issubset(options.keys()):
@@ -55,6 +57,13 @@ class ButtonGroup(QtWidgets.QWidget):
         else:
             self.group_layout.addWidget(btn, alignment=options.pop('alignment'))
 
+        if options['toolTip']:
+            btn.setToolTip(options.pop("toolTip"))
+
+        if self._fixedSize:
+            btn.setFixedSize(self.btn_size)
+            btn.setIconSize(QtCore.QSize(self.btn_size.width()-10, self.btn_size.height()-10))
+
         return btn
 
     def toggled(self):
@@ -63,3 +72,27 @@ class ButtonGroup(QtWidgets.QWidget):
             self.currentSelectedBtn.setChecked(False)
 
         self.currentSelectedBtn = self.sender()
+
+    def setFixedBtnSize(self, size: QtCore.QSize):
+
+        self._fixedSize = True
+        self.btn_size = size
+
+        if self.layout_type == GRID_LAYOUT:
+            for row in range(1, self.group_layout.rowCount()):
+                for col in range(1, self.group_layout.columnCount()):
+                    btn = self.group_layout.itemAtPosition(row, col).widget()
+                    btn.setFixedSize(size)
+
+        else:
+            index = self.group_layout.count()
+            # print(index)
+            while index > 0:
+                index -= 1
+                btn = self.group_layout.itemAt(index).widget()
+                btn.setFixedSize(size)
+                btn.setIconSize(QtCore.QSize(size.width() - 10, size.height() - 10))
+
+
+
+

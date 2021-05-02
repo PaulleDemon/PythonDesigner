@@ -58,17 +58,13 @@ class ViewPort(QtWidgets.QGraphicsView):
     def initUI(self):
 
         self.btnGrp = ButtonGroup.ButtonGroup(ButtonGroup.VERTICAL_LAYOUT, parent=self)
-
-        btn1 = QtWidgets.QPushButton(text="hi")
-        btn1.setFixedSize(50, 50)
-
-        self.btnGrp.addToGroup(btn1)
+        self.btnGrp.setFixedBtnSize(QtCore.QSize(50, 50))
         self.btnGrp.move(QtCore.QPoint(10, 50))
-
         self.btnGrp_pos = self.btnGrp.geometry().topLeft()
-        # btnGrp.addToGroup(btn)
-        print("Btn: ", self.btnGrp_pos)
 
+        self.btnGrp.addToGroup(icon=QtGui.QIcon(r"Resources/Icons/SelectTool.png"), toolTip="Select Tool")
+        self.btnGrp.addToGroup(icon=QtGui.QIcon(r"Resources/Icons/PathTool.png"), toolTip="Path Tool")
+        self.btnGrp.addToGroup(icon=QtGui.QIcon(r"Resources/Icons/PathCutter.png"), toolTip="Cut Tool")
 
     def bgColor(self):
         return self._background_color
@@ -116,18 +112,17 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def toggleToolBar(self):
         self.anim = QtCore.QPropertyAnimation(self.btnGrp, b"pos")
+        self.anim.setDuration(250)
 
-        if self.btnGrp.isVisible():
+        if self.btnGrp.pos() == self.btnGrp_pos:
             self.anim.setStartValue(self.btnGrp_pos)
-            self.anim.setEndValue(QtCore.QPointF(-100, self.btnGrp_pos.y()))
+            self.anim.setEndValue(QtCore.QPointF(-70, self.btnGrp_pos.y()))
 
         else:
-            self.anim.setStartValue(QtCore.QPointF(-100, self.btnGrp_pos.y()))
+            self.anim.setStartValue(self.btnGrp.pos())
             self.anim.setEndValue(self.btnGrp_pos)
-            print("YES")
 
-        self.anim.setDuration(100)
-        self.anim.finished.connect(lambda: self.btnGrp.hide() if self.btnGrp.isVisible() else self.btnGrp.show())
+        # self.anim.finished.connect(lambda: self.btnGrp.hide() if self.btnGrp.visible else self.btnGrp.show())
         self.anim.start(self.anim.DeleteWhenStopped)
 
     def setScene(self, scene) -> None:
@@ -138,7 +133,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._scene.setItemIndexMethod(self._scene.NoIndex)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-        print("FocusItem: ", self.scene().focusItem())
 
         if event.key() & QtCore.Qt.Key_T and not self._scene.focusItem():
             self.toggleToolBar()
@@ -287,7 +281,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 group.setZValue(group.defaultZValue)
                 self._scene.addItem(group)
 
-                print("ItemsZ Value: ", [[y.zValue() for y in x.getPaths()] for x in group.childItems()])
+                # print("ItemsZ Value: ", [[y.zValue() for y in x.getPaths()] for x in group.childItems()])
             self._scene.removeItem(self._groupRectangle)
 
             self._groupRectangle = None
