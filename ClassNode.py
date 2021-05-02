@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
-from EditableLabel import EditableLabel, ClassType
+from CustomWidgets.EditableLabel import EditableLabel, ClassType
 
 
 class Container(QtWidgets.QWidget):

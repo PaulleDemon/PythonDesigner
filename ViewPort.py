@@ -1,10 +1,13 @@
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import pyqtProperty
-
-import ButtonGroup
+import ResourcePaths
+from CustomWidgets import ButtonGroup
 import GroupNode
 from ClassNode import ClassNode
 from Path import *
+
+
+SELECTION_MODE = 0
+CONNECT_MODE = 1
+CUT_MODE = 2
 
 
 class ViewPort(QtWidgets.QGraphicsView):
@@ -20,6 +23,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._isdrawingPath = False
         self._isCutting = False
         self._isdrawingGroupRect = False
+
+        self.current_mode = SELECTION_MODE
 
         self._groupRectangleStartPos = None
         self._groupRectangle = None
@@ -62,9 +67,19 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.btnGrp.move(QtCore.QPoint(10, 50))
         self.btnGrp_pos = self.btnGrp.geometry().topLeft()
 
-        self.btnGrp.addToGroup(icon=QtGui.QIcon(r"Resources/Icons/SelectTool.png"), toolTip="Select Tool")
-        self.btnGrp.addToGroup(icon=QtGui.QIcon(r"Resources/Icons/PathTool.png"), toolTip="Path Tool")
-        self.btnGrp.addToGroup(icon=QtGui.QIcon(r"Resources/Icons/PathCutter.png"), toolTip="Cut Tool")
+        self.select_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.SELECT_TOOL))
+        self.path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_TOOL))
+        self.cut_path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_CUTTER))
+
+        self.select_btn.toggled.connect(lambda: self.changeMode(SELECTION_MODE))
+        self.path_btn.toggled.connect(lambda: self.changeMode(CONNECT_MODE))
+        self.cut_path_btn.toggled.connect(lambda: self.changeMode(CUT_MODE))
+
+        self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tool", checked=True)
+        self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tool")
+        self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tool")
+
+
 
     def bgColor(self):
         return self._background_color
@@ -98,6 +113,10 @@ class ViewPort(QtWidgets.QGraphicsView):
     BgColor = pyqtProperty(QtGui.QColor, bgColor, setBgColor)
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
+
+    def changeMode(self, mode: int):
+        self.current_mode = mode
+        print("MODE: ", mode)
 
     def selectionChanged(self):  # moves all the selected items on top
 
