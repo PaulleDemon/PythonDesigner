@@ -41,7 +41,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self._cutter_pen = QtGui.QPen()
         self._cutter_pen.setColor(QtGui.QColor("#000000"))
-        self._cutter_pen.setWidthF(1.0)
+        self._cutter_pen.setWidthF(2.0)
         self._cutter_pen.setDashPattern([3, 3])
 
         self._background_color = QtGui.QColor("#ffffff")
@@ -115,6 +115,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def changeMode(self, mode: int):
         self.current_mode = mode
+        # self.setCursor(QtGui.QIcon())
         print("MODE: ", mode)
 
     def selectionChanged(self):  # moves all the selected items on top
@@ -183,7 +184,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         pos = self.mapToScene(event.pos())
 
-        if event.button() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ShiftModifier:
+        if event.button() & QtCore.Qt.LeftButton and event.modifiers() == QtCore.Qt.ShiftModifier:
             # enables multiple selection using shift
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
@@ -203,7 +204,7 @@ class ViewPort(QtWidgets.QGraphicsView):
             self._groupRectangleStartPos = pos
             return
 
-        if self.current_mode == CONNECT_MODE:
+        if self.current_mode == CONNECT_MODE or (event.modifiers() == QtCore.Qt.ControlModifier and event.button() == QtCore.Qt.LeftButton):
 
             item = self._scene.itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
@@ -213,10 +214,11 @@ class ViewPort(QtWidgets.QGraphicsView):
                 self._item1 = item
                 return
 
-        if self.current_mode == CUT_MODE:
+        if self.current_mode == CUT_MODE or (event.modifiers() == QtCore.Qt.AltModifier and event.button() == QtCore.Qt.LeftButton):
             self._line_cutter_painterPath = QtGui.QPainterPath(pos)
             self._line_cutter_path_item = QtWidgets.QGraphicsPathItem()
             self._line_cutter_path_item.setPen(self._cutter_pen)
+            self._line_cutter_path_item.setFlag(QtGui.QPainter.Antialiasing)
             self._scene.addItem(self._line_cutter_path_item)
             self._isCutting = True
 

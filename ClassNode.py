@@ -10,6 +10,8 @@ class Container(QtWidgets.QWidget):
             QFrame#Seperator{background-color: black;}
             """
 
+    resized = QtCore.pyqtSignal()
+
     def __init__(self, title="Class", *args, **kwargs):
         super(Container, self).__init__(*args, **kwargs)
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
@@ -92,10 +94,14 @@ class Container(QtWidgets.QWidget):
             label = self._title
         self.title.setText(label)
 
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        super(Container, self).resizeEvent(event)
+        self.resized.emit()
 
-class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no widget is there
 
-    geomertyChanged = QtCore.pyqtSignal()
+class ClassNode(QtWidgets.QGraphicsItem):
+
+    # geomertyChanged = QtCore.pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
@@ -136,6 +142,8 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         self.proxy.setContentsMargins(0, 0, 0, 0)
 
         self.container.setTitle(self._title)
+        self.container.resized.connect(self.geometryChanged)
+
         self.setTitleRect(100, 40)
 
     @property
@@ -190,6 +198,10 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         for path in paths:
             path.removeItem()
 
+    def geometryChanged(self):
+        for path in self._path:
+            path.updatePathPos()
+
     def itemChange(self, change, value):
         for path in self._path:
             path.updatePathPos()
@@ -222,6 +234,3 @@ class ClassNode(QtWidgets.QGraphicsItem):  # todo: shrink the widget when no wid
         painter.drawRect(self.boundingRect().adjusted(-1, -1, 1, 1))
 
         painter.restore()
-
-        for path in self._path:
-            path.updatePathPos()
