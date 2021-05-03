@@ -24,6 +24,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._isCutting = False
         self._isdrawingGroupRect = False
 
+        self.groups = set()
+
         self.current_mode = SELECTION_MODE
 
         self._groupRectangleStartPos = None
@@ -116,7 +118,20 @@ class ViewPort(QtWidgets.QGraphicsView):
     def changeMode(self, mode: int):
         self.current_mode = mode
         # self.setCursor(QtGui.QIcon())
-        print("MODE: ", mode)
+
+        if self.current_mode == CONNECT_MODE:
+            cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_TOOL_CURSOR).scaled(30, 30))
+            self.viewport().setCursor(cursor)
+            self.setCursor(cursor)
+
+        elif self.current_mode == CUT_MODE:
+            cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_CUTTER_CURSOR).scaled(30, 30))
+            self.viewport().setCursor(cursor)
+            self.setCursor(cursor)
+
+        else:
+            self.viewport().setCursor(QtCore.Qt.ArrowCursor)
+            self.setCursor(QtCore.Qt.ArrowCursor)
 
     def selectionChanged(self):  # moves all the selected items on top
 
@@ -144,12 +159,62 @@ class ViewPort(QtWidgets.QGraphicsView):
         # self.anim.finished.connect(lambda: self.btnGrp.hide() if self.btnGrp.visible else self.btnGrp.show())
         self.anim.start(self.anim.DeleteWhenStopped)
 
+    def removeGroup(self, grp: QtWidgets.QGraphicsItem):
+        self.scene().removeItem(grp)
+        self.groups.discard(grp)
+
+    def addClass(self, pos: QtCore.QPoint):
+        node = ClassNode()
+        node.setPos(self.mapToScene(pos))
+
+        self._scene.addItem(node)
+
+    def moveToGroup(self, grp):
+
+        selectedItems = self._scene.selectedItems()
+
+        for item in selectedItems:
+            if isinstance(item, ClassNode) and not item.parentItem():
+                item.setParentItem(grp)
+                item.setPos(item.mapToParent(item.pos()))
+
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)
         self._scene = scene
         self.setBackground()
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
+
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+
+
+        menu = QtWidgets.QMenu(self)
+
+        add_class = QtWidgets.QAction("Add Class")
+        add_class.triggered.connect(lambda: self.addClass(event.pos()))
+
+        items = self._scene.selectedItems()
+
+        add_to_grp = QtWidgets.QMenu("Add to Group")
+
+        if any(isinstance(item, ClassNode) for item in items):
+
+            for grp in self.groups:
+                action = QtWidgets.QAction(str(grp), self)
+                action.triggered.connect(lambda: self.moveToGroup(grp))
+                add_to_grp.addAction(action)
+
+            if not self.groups:
+                add_to_grp.setDisabled(True)
+
+        else:
+            super(ViewPort, self).contextMenuEvent(event)
+            return
+
+        menu.addAction(add_class)
+        menu.addMenu(add_to_grp)
+
+        menu.exec(self.mapToParent(event.pos()))
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
 
@@ -218,7 +283,6 @@ class ViewPort(QtWidgets.QGraphicsView):
             self._line_cutter_painterPath = QtGui.QPainterPath(pos)
             self._line_cutter_path_item = QtWidgets.QGraphicsPathItem()
             self._line_cutter_path_item.setPen(self._cutter_pen)
-            self._line_cutter_path_item.setFlag(QtGui.QPainter.Antialiasing)
             self._scene.addItem(self._line_cutter_path_item)
             self._isCutting = True
 
@@ -251,8 +315,10 @@ class ViewPort(QtWidgets.QGraphicsView):
             return
 
         if self._isdrawingPath:
+
             self._current_path.setDestinationPoints(pos)
             self._scene.update(self.sceneRect())
+
             return
 
         if self._isCutting:
@@ -291,20 +357,29 @@ class ViewPort(QtWidgets.QGraphicsView):
             colliding_items = self._groupRectangle.collidingItems()
 
             if colliding_items:
-                for item in colliding_items:
 
+                for item in colliding_items:
                     if type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
 
                         if isinstance(item, QtWidgets.QGraphicsProxyWidget):
                             item = item.parentItem()
 
+                        if isinstance(item.parentItem(), QtWidgets.QGraphicsItem):
+                            # continue if the item is already in another group
+                            continue
+
                         item.setParentItem(group)
                         group.addToGroup(item)
 
+
                 group.setZValue(group.defaultZValue)
                 self._scene.addItem(group)
+                self.groups.add(group)
 
-                # print("ItemsZ Value: ", [[y.zValue() for y in x.getPaths()] for x in group.childItems()])
+                if not group.childItems():
+                    self._scene.removeItem(group)
+                    self.groups.remove(group)
+
             self._scene.removeItem(self._groupRectangle)
 
             self._groupRectangle = None
@@ -324,6 +399,15 @@ class ViewPort(QtWidgets.QGraphicsView):
         if self._isdrawingPath:
 
             self._current_path.setZValue(-1)
+
+            if self._item1 and (isinstance(self._item1, QtWidgets.QGraphicsProxyWidget) or isinstance(self._item1, ClassNode)):
+                items = self._item1
+                if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
+                    items = self._item1.parentItem()
+
+                if isinstance(items.parentItem(), GroupNode.GroupNode):
+                    self._current_path.setZValue(-4)
+
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \

@@ -208,6 +208,16 @@ class ClassNode(QtWidgets.QGraphicsItem):
 
         return super(ClassNode, self).itemChange(change, value)
 
+    def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
+
+        menu = QtWidgets.QMenu()
+
+        remove = QtWidgets.QAction("Remove Class")
+        remove.triggered.connect(lambda: [self.removeConnectedPaths(), self.scene().removeItem(self)])
+
+        menu.addAction(remove)
+        menu.exec(event.screenPos())
+
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.proxy.mouseDoubleClickEvent(event)
         super(ClassNode, self).mouseDoubleClickEvent(event)
