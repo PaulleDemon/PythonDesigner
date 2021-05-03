@@ -185,36 +185,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
 
-    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-
-
-        menu = QtWidgets.QMenu(self)
-
-        add_class = QtWidgets.QAction("Add Class")
-        add_class.triggered.connect(lambda: self.addClass(event.pos()))
-
-        items = self._scene.selectedItems()
-
-        add_to_grp = QtWidgets.QMenu("Add to Group")
-
-        if any(isinstance(item, ClassNode) for item in items):
-
-            for grp in self.groups:
-                action = QtWidgets.QAction(str(grp), self)
-                action.triggered.connect(lambda: self.moveToGroup(grp))
-                add_to_grp.addAction(action)
-
-            if not self.groups:
-                add_to_grp.setDisabled(True)
-
-        else:
-            super(ViewPort, self).contextMenuEvent(event)
-            return
-
-        menu.addAction(add_class)
-        menu.addMenu(add_to_grp)
-
-        menu.exec(self.mapToParent(event.pos()))
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
 
@@ -245,6 +215,40 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.scale(factor, factor)
 
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+
+        menu = QtWidgets.QMenu(self)
+
+        add_class = QtWidgets.QAction("Add Class")
+        add_class.triggered.connect(lambda: self.addClass(event.pos()))
+
+        items = self._scene.selectedItems()
+        itemAt = self._scene.itemAt(self.mapToScene(event.pos()), QtGui.QTransform())
+
+        add_to_grp = QtWidgets.QMenu("Add to Group")
+
+        if any(isinstance(item, ClassNode) for item in items):
+
+            for grp in self.groups:
+                action = QtWidgets.QAction(str(grp), self)
+                action.triggered.connect(lambda: self.moveToGroup(grp))
+                add_to_grp.addAction(action)
+
+            if not self.groups:
+                add_to_grp.setDisabled(True)
+
+        if itemAt and len(items) == 1:
+            super(ViewPort, self).contextMenuEvent(event)
+            return
+
+        menu.addAction(add_class)
+        menu.addMenu(add_to_grp)
+
+        menu.exec(self.mapToParent(event.pos()))
+
+
+class View(ViewPort):
+
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
         pos = self.mapToScene(event.pos())
@@ -260,7 +264,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 item.setSelected(True)
             return
 
-        if event.button() & QtCore.Qt.RightButton:
+        if event.modifiers()==QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
             self._groupRectangle = QtWidgets.QGraphicsRectItem()
             self._groupRectangle.setBrush(self._groupRectangleBgBrush)
             self._scene.addItem(self._groupRectangle)
@@ -454,6 +458,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         super(ViewPort, self).mouseReleaseEvent(event)
 
-    # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+# def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
     #     super(ViewPort, self).mouseDoubleClickEvent(event)
