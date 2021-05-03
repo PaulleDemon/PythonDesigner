@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 from CustomWidgets.EditableLabel import EditableLabel, ClassType
@@ -97,6 +98,40 @@ class Container(QtWidgets.QWidget):
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super(Container, self).resizeEvent(event)
         self.resized.emit()
+
+    def serialize(self):
+        ordDict = OrderedDict()
+
+        ordDict['className'] = self.class_title.getText()
+
+        varCount = self.variable_layout.count()-1
+        varList = []
+        while varCount >= 0:
+
+            item = self.variable_layout.itemAt(varCount)
+            if item and isinstance(item.widget(), ClassType):
+                varList.append(item.widget().serialize())
+
+            varCount -= 1
+
+        ordDict['variables'] = varList
+
+        methodCount = self.method_layout.count() - 1
+        methodList = []
+        while methodCount >= 0:
+
+            item = self.method_layout.itemAt(methodCount)
+            if item and isinstance(item.widget(), ClassType):
+                methodList.append(item.widget().serialize())
+
+            methodCount -= 1
+
+        ordDict['methods'] = methodList
+
+        return ordDict
+
+    def deserialize(self):
+        pass
 
 
 class ClassNode(QtWidgets.QGraphicsItem):
@@ -244,3 +279,9 @@ class ClassNode(QtWidgets.QGraphicsItem):
         painter.drawRect(self.boundingRect().adjusted(-1, -1, 1, 1))
 
         painter.restore()
+
+    def serialize(self):
+        return self.container.serialize()
+
+    def deserialize(self):
+        pass

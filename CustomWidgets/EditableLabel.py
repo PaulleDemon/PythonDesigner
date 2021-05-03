@@ -1,4 +1,6 @@
 import textwrap
+
+from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 
@@ -83,6 +85,12 @@ class EditableLabel(QtWidgets.QWidget):
     def enableToolTip(self, heading=""):
         self._toolTipHeading = heading
         self._edit_label.textChanged.connect(self._updateToolTip)
+
+    def serialize(self):
+        return self._text
+
+    def deserialize(self):
+        pass
 
 
 class ClassType(EditableLabel):  # class that specifies what type of method, eg: - instance method static method etc.
@@ -182,6 +190,18 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         menu.addActions([add_comment, remove_comment, edit_comment])
 
         menu.popup(self.mapToGlobal(event.pos()))
+
+    def serialize(self):
+        ordDict = OrderedDict()
+
+        ordDict['text'] = self.getText()
+        ordDict['type'] = self.type
+        ordDict['memberType'] = self.member_type
+
+        return ordDict
+
+    def deserialize(self):
+        pass
 
 
 class CommentDialog(QtWidgets.QDialog):
