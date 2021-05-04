@@ -89,7 +89,7 @@ class EditableLabel(QtWidgets.QWidget):
     def serialize(self):
         return self._text
 
-    def deserialize(self):
+    def deserialize(self, data):
         pass
 
 
@@ -197,11 +197,15 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         ordDict['text'] = self.getText()
         ordDict['type'] = self.type
         ordDict['memberType'] = self.member_type
+        ordDict['comment'] = self.comment
 
         return ordDict
 
-    def deserialize(self):
-        pass
+    def deserialize(self, data):
+        self.setText(data['text'])
+        self.setType(data['type'])
+        self.setMemberType(data['memberType'])
+        self.comment = data['comment']
 
 
 class CommentDialog(QtWidgets.QDialog):

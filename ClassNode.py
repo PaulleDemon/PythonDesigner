@@ -73,14 +73,20 @@ class Container(QtWidgets.QWidget):
 
     def addVariableName(self):
         var = ClassType(parent=self, placeHolder="Variable Name", defaultText="Variable Name")
-        var.setValidator()
+        self.insertToVarLayout(var)
+        # self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
+    def insertToVarLayout(self, var):
+        var.setValidator()
         var.setMinimumHeight(30)
         var.deleted.connect(self.adjust)
         self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
     def addMethodName(self):
         var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+        self.insertIntoMethodLayout(var)
+
+    def insertIntoMethodLayout(self, var):
         var.setValidator()
 
         var.setMinimumHeight(30)
@@ -94,6 +100,9 @@ class Container(QtWidgets.QWidget):
         if not label:
             label = self._title
         self.title.setText(label)
+
+    def setClassName(self, text: str = ""):
+        self.class_title.setText(text)
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super(Container, self).resizeEvent(event)
@@ -130,8 +139,19 @@ class Container(QtWidgets.QWidget):
 
         return ordDict
 
-    def deserialize(self):
-        pass
+    def deserialize(self, data):
+
+        self.setClassName(data['className'])
+
+        for variable in data['variables']:
+            var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+            var.deserialize(variable)
+            self.insertToVarLayout(var)
+
+        for method in data['methods']:
+            meth = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+            meth.deserialize(method)
+            self.insertIntoMethodLayout(meth)
 
 
 class ClassNode(QtWidgets.QGraphicsItem):
@@ -281,7 +301,15 @@ class ClassNode(QtWidgets.QGraphicsItem):
         painter.restore()
 
     def serialize(self):
-        return self.container.serialize()
+        ordDict = OrderedDict()
+        pos = self.scenePos() if self.parentItem() is None else self.mapToParent(self.pos())
+        ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
+        # ordDict['Connection'] = OrderedDict({"Destination": list(self.getDestination())})
+        ordDict['container']= self.container.serialize()
+        return ordDict
 
-    def deserialize(self):
-        pass
+    def deserialize(self, data):
+
+        pos = QtCore.QPointF(data['pos']['x'], data['pos']['y'])
+        self.setPos(pos)
+        self.container.deserialize(data['container'])

@@ -1,5 +1,7 @@
 import json
-import threading
+import concurrent.futures
+from collections import OrderedDict
+
 import ResourcePaths
 from CustomWidgets import ButtonGroup
 import GroupNode
@@ -186,7 +188,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setBackground()
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
-
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
 
@@ -451,14 +452,17 @@ class View(ViewPort):
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
 
-        if event.key() & QtCore.Qt.Key_T and not self._scene.focusItem():
+        if event.key() == QtCore.Qt.Key_T and not self._scene.focusItem():
             self.toggleToolBar()
 
-        if event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
             self.btnGrp.focusNext()
 
-        if event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
             self.serialize()
+
+        elif event.key() == QtCore.Qt.Key_O and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.deSerialize()
 
         else:
             super(ViewPort, self).keyPressEvent(event)
@@ -470,20 +474,39 @@ class View(ViewPort):
             if isinstance(item, ClassNode):
                 classNodes.append(item.serialize())
 
-        data = {"ClassNodes": classNodes}
+        data = OrderedDict({"ClassNodes": classNodes})
 
         def save():
             with open("datafile.json", "w") as write:
                 json.dump(data, write, indent=2)
 
-        thread = threading.Thread(target=save)
-        thread.start()
+            print("Serialize complete.")
 
-
-        print("Serialize complete.")
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            _ = executor.submit(save)
 
     def deSerialize(self):
-        pass
+
+        for item in self._scene.items():
+            self._scene.removeItem(item)
+
+        def load():
+            with open("datafile.json", "r") as read:
+                data = OrderedDict(json.load(read))
+
+            return data
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(load)
+            data = future.result()
+
+        print("Data: ", data)
+        for nodes in data['ClassNodes']:
+            node = ClassNode()
+            node.deserialize(nodes)
+            self._scene.addItem(node)
+
+
 # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
     #     super(ViewPort, self).mouseDoubleClickEvent(event)

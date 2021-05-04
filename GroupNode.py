@@ -28,7 +28,6 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.proxy.setWidget(self.label)
         self.proxy.setContentsMargins(0, 0, 0, 0)
 
-
         self.label.setFixedHeight(30)
         self.label.setStyleSheet("background-color: red;")
 
