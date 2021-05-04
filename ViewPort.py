@@ -367,7 +367,6 @@ class View(ViewPort):
                         item.setParentItem(group)
                         group.addToGroup(item)
 
-
                 group.setZValue(group.defaultZValue)
                 self._scene.addItem(group)
                 self.groups.add(group)
@@ -470,16 +469,19 @@ class View(ViewPort):
     def serialize(self):
         print("Serializing...")
         classNodes = []
+        paths = []
+        groupNode = []
         for item in self._scene.items():
             if isinstance(item, ClassNode):
                 classNodes.append(item.serialize())
 
-        paths = []
-        for item in self._scene.items():
-            if isinstance(item, Path):
+            elif isinstance(item, Path):
                 paths.append(item.serialize())
 
-        data = OrderedDict({"ClassNodes": classNodes, "Paths": paths})
+            elif isinstance(item, GroupNode.GroupNode):
+                groupNode.append(item.serialize())
+
+        data = OrderedDict({"ClassNodes": classNodes, "Paths": paths, "GroupNodes": groupNode})
 
         def save():
             with open("datafile.json", "w") as write:
@@ -517,7 +519,7 @@ class View(ViewPort):
         for paths in data['Paths']:
             path = Path()
 
-            for item in self.scene().items():
+            for item in self._scene.items():
                 if isinstance(item, ClassNode):
                     if item.id == paths['source']:
                         path.setSourceNode(item)
@@ -533,6 +535,21 @@ class View(ViewPort):
                     break
 
             path.deserialize(paths)
+
+        for grpNodes in data['GroupNodes']:
+
+            groupNode = GroupNode.GroupNode()
+            children = grpNodes['children']
+            for item in self._scene.items():
+                if isinstance(item, ClassNode):
+                    if item.id in grpNodes['children']:
+                        item.setParentItem(groupNode)
+                        children.pop()
+
+                if len(children) == 0:
+                    break
+
+            self._scene.addItem(groupNode)
 
 # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)

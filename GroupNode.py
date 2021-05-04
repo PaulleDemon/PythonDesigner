@@ -1,15 +1,20 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 
+from collections import OrderedDict
+
+import ClassNode
 from CustomWidgets.EditableLabel import EditableLabel
 
 
 class GroupNode(QtWidgets.QGraphicsItem):
 
-    def __init__(self, rect: QtCore.QRectF, group_name="Module",*args, **kwargs):
+    def __init__(self, rect: QtCore.QRectF=QtCore.QRectF(), group_name="Module",*args, **kwargs):
         super(GroupNode, self).__init__(*args, **kwargs)
         self.rect = rect
 
         self.group_members = set()
+
+        self.id = id(self)
 
         self.group_name = group_name
 
@@ -88,8 +93,8 @@ class GroupNode(QtWidgets.QGraphicsItem):
         super(GroupNode, self).mousePressEvent(event)
     
     def boundingRect(self) -> QtCore.QRectF:
-        if self.childrenBoundingRect() == QtCore.QRectF():
-            self.scene().removeItem(self)
+        # if self.childrenBoundingRect() == QtCore.QRectF():
+        #     self.scene().removeItem(self)
 
         self.rect = self.childrenBoundingRect().marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
         # self.proxy.setPos(self.proxy.mapFromParent(QtCore.QPointF(self.rect.center().x(), self.rect.y()-10)))
@@ -103,3 +108,17 @@ class GroupNode(QtWidgets.QGraphicsItem):
             painter.setPen(QtGui.QColor("blue"))
 
         painter.drawRect(self.boundingRect())
+
+    def serialize(self):
+        ordDict = OrderedDict()
+        ordDict['id'] = self.id
+        ordDict['pos'] = {'x': self.scenePos().x(), 'y': self.scenePos().y()}
+        ordDict['children'] = [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]
+
+        return ordDict
+
+    def deserialize(self, data):
+        self.id = data['id']
+        self.setPos(QtCore.QPointF(data['pos']['x'], data['pos']['y']))
+        self.setZValue(self.defaultZValue)
+
