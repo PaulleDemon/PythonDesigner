@@ -86,11 +86,6 @@ class EditableLabel(QtWidgets.QWidget):
         self._toolTipHeading = heading
         self._edit_label.textChanged.connect(self._updateToolTip)
 
-    def serialize(self):
-        return self._text
-
-    def deserialize(self, data):
-        pass
 
 
 class ClassType(EditableLabel):  # class that specifies what type of method, eg: - instance method static method etc.
@@ -206,6 +201,7 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         self.setType(data['type'])
         self.setMemberType(data['memberType'])
         self.comment = data['comment']
+        self._setTooltip()
 
 
 class CommentDialog(QtWidgets.QDialog):

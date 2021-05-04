@@ -1,4 +1,5 @@
 import math
+from collections import OrderedDict
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
@@ -172,8 +173,8 @@ class Path(QtWidgets.QGraphicsPathItem):
 
     def contextMenuEvent(self, event) -> None:
 
-        if self.isSelected():
-            return
+        # if self.isSelected():
+        #     return
 
         menu = QtWidgets.QMenu()
 
@@ -309,6 +310,26 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         if triangle_destination is not None:
             painter.drawPolyline(triangle_destination)
+
+    def serialize(self):
+        ordDict = OrderedDict()
+        ordDict['source'] = self.getSourceNode().id
+        ordDict['destination'] = self.getDestinationNode().id
+        ordDict['arrowType'] = self._arrow_type
+        ordDict['pathType'] = self._path_type
+
+        return ordDict
+
+    def deserialize(self, data):
+
+        # for item in self.scene().items():
+        #
+        #     if isinstance(item, ClassNode.ClassNode):
+        #         [data['source'], data['destination']]
+
+
+        self._arrow_type = data['arrowType']
+        self._path_type = data['pathType']
 
 
 class PathCalc:

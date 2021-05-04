@@ -219,6 +219,10 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         add_to_grp = QtWidgets.QMenu("Add to Group")
 
+        if itemAt or len(items) == 1:
+            super(ViewPort, self).contextMenuEvent(event)
+            return
+
         if any(isinstance(item, ClassNode) for item in items):
 
             for grp in self.groups:
@@ -228,10 +232,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             if not self.groups:
                 add_to_grp.setDisabled(True)
-
-        if itemAt and len(items) == 1:
-            super(ViewPort, self).contextMenuEvent(event)
-            return
 
         menu.addAction(add_class)
         menu.addMenu(add_to_grp)
@@ -474,7 +474,12 @@ class View(ViewPort):
             if isinstance(item, ClassNode):
                 classNodes.append(item.serialize())
 
-        data = OrderedDict({"ClassNodes": classNodes})
+        paths = []
+        for item in self._scene.items():
+            if isinstance(item, Path):
+                paths.append(item.serialize())
+
+        data = OrderedDict({"ClassNodes": classNodes, "Paths": paths})
 
         def save():
             with open("datafile.json", "w") as write:
@@ -487,8 +492,11 @@ class View(ViewPort):
 
     def deSerialize(self):
 
-        for item in self._scene.items():
-            self._scene.removeItem(item)
+        self._scene = QtWidgets.QGraphicsScene()
+        self._selected_items = set()
+
+        self.setScene(self._scene)
+        print(self.scene())
 
         def load():
             with open("datafile.json", "r") as read:
@@ -506,6 +514,25 @@ class View(ViewPort):
             node.deserialize(nodes)
             self._scene.addItem(node)
 
+        for paths in data['Paths']:
+            path = Path()
+
+            for item in self.scene().items():
+                if isinstance(item, ClassNode):
+                    if item.id == paths['source']:
+                        path.setSourceNode(item)
+                        item.addPath(path)
+
+                    if item.id == paths['destination']:
+                        path.setDestinationNode(item)
+                        item.addPath(path)
+
+                if path.getDestinationNode() and path.getSourceNode():
+                    path.deserialize(paths)
+                    self._scene.addItem(path)
+                    break
+
+            path.deserialize(paths)
 
 # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)

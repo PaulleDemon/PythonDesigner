@@ -113,27 +113,23 @@ class Container(QtWidgets.QWidget):
 
         ordDict['className'] = self.class_title.getText()
 
-        varCount = self.variable_layout.count()-1
+        varCount = self.variable_layout.count()
         varList = []
-        while varCount >= 0:
 
-            item = self.variable_layout.itemAt(varCount)
+        for x in range(0, varCount):
+            item = self.variable_layout.itemAt(x)
             if item and isinstance(item.widget(), ClassType):
                 varList.append(item.widget().serialize())
 
-            varCount -= 1
-
         ordDict['variables'] = varList
 
-        methodCount = self.method_layout.count() - 1
+        methodCount = self.method_layout.count()
         methodList = []
-        while methodCount >= 0:
 
-            item = self.method_layout.itemAt(methodCount)
+        for x in range(0, methodCount):
+            item = self.method_layout.itemAt(x)
             if item and isinstance(item.widget(), ClassType):
                 methodList.append(item.widget().serialize())
-
-            methodCount -= 1
 
         ordDict['methods'] = methodList
 
@@ -156,12 +152,13 @@ class Container(QtWidgets.QWidget):
 
 class ClassNode(QtWidgets.QGraphicsItem):
 
-    # geomertyChanged = QtCore.pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
         self._path = set()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+
+        self.id = id(self)
 
         self._title = "Class: "
         self.defaultZValue = 0
@@ -303,13 +300,15 @@ class ClassNode(QtWidgets.QGraphicsItem):
     def serialize(self):
         ordDict = OrderedDict()
         pos = self.scenePos() if self.parentItem() is None else self.mapToParent(self.pos())
+        ordDict['id'] = self.id
         ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
-        # ordDict['Connection'] = OrderedDict({"Destination": list(self.getDestination())})
         ordDict['container']= self.container.serialize()
+        # ordDict['connections'] = [item.id for item in self.getDestination() if isinstance(item, ClassNode)]
         return ordDict
 
     def deserialize(self, data):
 
+        self.id = data['id']
         pos = QtCore.QPointF(data['pos']['x'], data['pos']['y'])
         self.setPos(pos)
         self.container.deserialize(data['container'])
