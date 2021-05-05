@@ -30,8 +30,14 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
         self.label = EditableLabel(text=self.group_name)
 
+        # widget = QtWidgets.QWidget()
+        # widget.setLayout(QtWidgets.QVBoxLayout())
+        # widget.layout().addWidget(self.label)
+
         self.proxy.setWidget(self.label)
+        # self.proxy.setWidget(widget)
         self.proxy.setContentsMargins(0, 0, 0, 0)
+        self.proxy.setFlag(self.proxy.ItemIsFocusable)
 
         self.label.setFixedHeight(30)
         self.label.setStyleSheet("background-color: red;")
@@ -52,7 +58,10 @@ class GroupNode(QtWidgets.QGraphicsItem):
     def removeChild(self, item):
         self.removeItemFromGroup(item)
 
-        if len(self.group_members) == 0:
+        # if len(self.group_members) == 0:
+        #     self.scene().removeItem(self)
+
+        if not self.group_members:
             self.scene().removeItem(self)
 
     def deleteGroup(self, members=False):  # if members is True then children will also get deleted
@@ -93,7 +102,10 @@ class GroupNode(QtWidgets.QGraphicsItem):
         menu.exec(event.screenPos())
     
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+
+        print("Double: ", event.pos(), self.proxy.geometry())
         self.proxy.mouseDoubleClickEvent(event)
+
         super(GroupNode, self).mouseDoubleClickEvent(event)
     
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
@@ -107,6 +119,7 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.proxy.setParentItem(self)
         self.rect = childrenBoundingRect.marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
 
+        self.proxy.prepareGeometryChange()
         point = QtCore.QPointF(self.rect.center().x()-self.proxy.rect().center().x(), self.rect.y()+10)
         self.proxy.setPos(point)
 

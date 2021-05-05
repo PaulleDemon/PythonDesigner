@@ -51,9 +51,13 @@ class EditableLabel(QtWidgets.QWidget):
         self.deleteLater()
         self.deleted.emit()
 
-    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent, pos=None):
 
-        if self._label.contentsRect().contains(event.pos()):
+        print("Label: ", self.mapFromParent(event.pos()), self._label.contentsRect().contains(event.localPos().toPoint()), self._label.contentsRect())
+        print("Parent: ", self.parent() )
+        pos = event.pos() if self.parent() else self.mapFromParent(event.pos())
+        if self._label.geometry().contains(pos):
+        # if self._label.contentsRect().contains(self.mapFromParent(event.pos())):
 
             self._label.hide()
             self._edit_label.show()
