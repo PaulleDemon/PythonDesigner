@@ -3,6 +3,8 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 class GroupNode(QtWidgets.QGraphicsItem):
 
+    removed = QtCore.pyqtSignal()
+
     def __init__(self, rect: QtCore.QRectF, *args, **kwargs):
         super(GroupNode, self).__init__(*args, **kwargs)
         self.rect = rect
@@ -34,11 +36,12 @@ class GroupNode(QtWidgets.QGraphicsItem):
             for item in self.childItems():
                 print(item)
                 item.setParentItem(None)
-                item.removeConnectedPaths
+                item.removeConnectedPaths()
                 item.setPos(item.scenePos())
                 self.removeItemFromGroup(item)
 
-        self.scene().removeItem(self)
+        self.scene().views()[0].removeGroup(self)
+        # self.scene().removeItem(self)
 
     def pos(self) -> QtCore.QPointF:
         return QtCore.QPointF(self.rect.x(), self.rect.y())

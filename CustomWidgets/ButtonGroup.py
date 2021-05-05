@@ -15,6 +15,9 @@ class ButtonGroup(QtWidgets.QWidget):
         self.group_layout = None
         self.layout_type = layout
         self._fixedSize = False
+
+        self.default_btn = None
+        self.current_btnIndex = 0
         self.btn_size = QtCore.QSize()
 
         try:
@@ -31,6 +34,7 @@ class ButtonGroup(QtWidgets.QWidget):
                    **kwargs) -> QtWidgets.QPushButton:
 
         options = {"toolTip": "",
+                   "checked": False,
                    "alignment": QtCore.Qt.Alignment(),
                    "row": 0,
                    "column": 0,
@@ -47,7 +51,7 @@ class ButtonGroup(QtWidgets.QWidget):
             btn = QtWidgets.QPushButton(icon, text)
 
         btn.setCheckable(True)
-        btn.toggled.connect(self.toggled)
+        btn.clicked.connect(self.clicked)
 
         if self.layout_type == GRID_LAYOUT:
             self.group_layout.addWidget(btn, options.pop('row'), options.pop('column'),
@@ -60,18 +64,47 @@ class ButtonGroup(QtWidgets.QWidget):
         if options['toolTip']:
             btn.setToolTip(options.pop("toolTip"))
 
+        if options['checked']:
+            btn.setChecked(True)
+            self.default_btn = btn
+            self.currentSelectedBtn = btn
+            self.current_btnIndex = self.group_layout.indexOf(btn)
+
         if self._fixedSize:
             btn.setFixedSize(self.btn_size)
             btn.setIconSize(QtCore.QSize(self.btn_size.width()-10, self.btn_size.height()-10))
 
         return btn
 
-    def toggled(self):
+    def focusNext(self):
 
-        if self.currentSelectedBtn is not None:
+        try:
+            self.group_layout.itemAt(self.current_btnIndex).widget().setChecked(False)
+            if self.current_btnIndex == self.group_layout.count()-1:
+                self.current_btnIndex = 0
+            else:
+                self.current_btnIndex += 1
+            print("COUNT; ", self.current_btnIndex, self.group_layout.count())
+            self.group_layout.itemAt(self.current_btnIndex).widget().setChecked(True)
+
+        except Exception:
+            pass
+
+    def clicked(self):
+
+        if self.currentSelectedBtn is not None and self.sender():
             self.currentSelectedBtn.setChecked(False)
+            self.currentSelectedBtn = None
 
-        self.currentSelectedBtn = self.sender()
+        if not self.sender().isChecked():
+            self.currentSelectedBtn = self.default_btn
+            self.default_btn.setChecked(True)
+            return
+
+        else:
+            self.currentSelectedBtn = self.sender()
+
+        self.currentSelectedBtn.toggled.emit(self.currentSelectedBtn.isChecked())
 
     def setFixedBtnSize(self, size: QtCore.QSize):
 

@@ -118,7 +118,7 @@ class Path(QtWidgets.QGraphicsPathItem):
             raise Exception(f"Invalid Path Type: {type}")
 
         self._path_type = type
-        self.update(self.sceneBoundingRect())
+        self.update(self.boundingRect().adjusted(50, 50, 50, 50))
 
     def updatePathPos(self):
 
@@ -153,7 +153,7 @@ class Path(QtWidgets.QGraphicsPathItem):
             raise ValueError(f"Unknown Head type '{head_type}'")
 
         self._arrow_type = head_type
-        self.update(self.sceneBoundingRect())
+        self.updatePathPos()
 
     def removeItem(self):
         self._sourceNode.removePath(self)
@@ -162,12 +162,12 @@ class Path(QtWidgets.QGraphicsPathItem):
 
     def hoverEnterEvent(self, event) -> None:
         self._hovered = True
-        self.update(self.sceneBoundingRect())
+        self.update(self.boundingRect().adjusted(50, 50, 50, 50))
         super(Path, self).hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event) -> None:
         self._hovered = False
-        self.update(self.sceneBoundingRect())
+        self.update(self.boundingRect().adjusted(50, 50, 50, 50))
         super(Path, self).hoverLeaveEvent(event)
 
     def contextMenuEvent(self, event) -> None:
@@ -211,7 +211,7 @@ class Path(QtWidgets.QGraphicsPathItem):
 
         if self._arrow_type == DOUBLE_HEADED:
             invert_head.setDisabled(True)
-        print("Z Value: ", self.zValue())
+
         if self.zValue() == 2:
             on_top.setDisabled(True)
 
