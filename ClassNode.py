@@ -150,8 +150,10 @@ class Container(QtWidgets.QWidget):
             self.insertIntoMethodLayout(meth)
 
 
-class ClassNode(QtWidgets.QGraphicsItem):
+# class ClassNode(QtWidgets.QGraphicsItem):
+class ClassNode(QtWidgets.QGraphicsObject):
 
+    removed = QtCore.pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
@@ -260,12 +262,18 @@ class ClassNode(QtWidgets.QGraphicsItem):
 
         return super(ClassNode, self).itemChange(change, value)
 
+    def removeNode(self):
+        self.removeConnectedPaths()
+
+        self.scene().removeItem(self)
+        self.removed.emit()
+
     def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
 
         menu = QtWidgets.QMenu()
 
         remove = QtWidgets.QAction("Remove Class")
-        remove.triggered.connect(lambda: [self.removeConnectedPaths(), self.scene().removeItem(self)])
+        remove.triggered.connect(self.removeNode)
 
         menu.addAction(remove)
         menu.exec(event.screenPos())

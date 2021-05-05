@@ -44,9 +44,16 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.add(item)
+        item.removed.connect(lambda: self.removeChild(item))  # classNode
 
     def removeItemFromGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.discard(item)
+
+    def removeChild(self, item):
+        self.removeItemFromGroup(item)
+
+        if len(self.group_members) == 0:
+            self.scene().removeItem(self)
 
     def deleteGroup(self, members=False):  # if members is True then children will also get deleted
 
@@ -93,22 +100,16 @@ class GroupNode(QtWidgets.QGraphicsItem):
         super(GroupNode, self).mousePressEvent(event)
     
     def boundingRect(self):
-        if self.childrenBoundingRect() == QtCore.QRectF():
-            self.scene().removeItem(self)
-            return
 
-        # self.rect = self.childrenBoundingRect()
         self.proxy.setParentItem(None)
-        children = self.childrenBoundingRect()
+        childrenBoundingRect = self.childrenBoundingRect()
+
         self.proxy.setParentItem(self)
+        self.rect = childrenBoundingRect.marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
 
-        self.rect = children.marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
-
-        # x, y = (self.rect.center().x() - self.label.rect().center().x()), self.rect.y()
         point = QtCore.QPointF(self.rect.center().x()-self.proxy.rect().center().x(), self.rect.y()+10)
         self.proxy.setPos(point)
-        # self.proxy.setPos(self.mapToParent(20, 10))
-        # self.proxy.setPos(self.proxy.mapToParent(QtCore.QPointF(self.rect.center().x(), self.rect.y()-10)))
+
 
         return self.rect
 
