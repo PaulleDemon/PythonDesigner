@@ -30,17 +30,13 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
         self.label = EditableLabel(text=self.group_name)
 
-        # widget = QtWidgets.QWidget()
-        # widget.setLayout(QtWidgets.QVBoxLayout())
-        # widget.layout().addWidget(self.label)
+        self.label.setFixedHeight(30)
+        self.label.setStyleSheet("background-color: transparent; color: white;")
 
         self.proxy.setWidget(self.label)
         # self.proxy.setWidget(widget)
         self.proxy.setContentsMargins(0, 0, 0, 0)
         self.proxy.setFlag(self.proxy.ItemIsFocusable)
-
-        self.label.setFixedHeight(30)
-        self.label.setStyleSheet("background-color: red;")
 
     def groupName(self)->str:
         return self.group_name
@@ -57,9 +53,6 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
     def removeChild(self, item):
         self.removeItemFromGroup(item)
-
-        # if len(self.group_members) == 0:
-        #     self.scene().removeItem(self)
 
         if not self.group_members:
             self.scene().removeItem(self)

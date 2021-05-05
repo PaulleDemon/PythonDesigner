@@ -53,11 +53,8 @@ class EditableLabel(QtWidgets.QWidget):
 
     def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent, pos=None):
 
-        print("Label: ", self.mapFromParent(event.pos()), self._label.contentsRect().contains(event.localPos().toPoint()), self._label.contentsRect())
-        print("Parent: ", self.parent() )
         pos = event.pos() if self.parent() else self.mapFromParent(event.pos())
         if self._label.geometry().contains(pos):
-        # if self._label.contentsRect().contains(self.mapFromParent(event.pos())):
 
             self._label.hide()
             self._edit_label.show()
@@ -89,7 +86,6 @@ class EditableLabel(QtWidgets.QWidget):
     def enableToolTip(self, heading=""):
         self._toolTipHeading = heading
         self._edit_label.textChanged.connect(self._updateToolTip)
-
 
 
 class ClassType(EditableLabel):  # class that specifies what type of method, eg: - instance method static method etc.

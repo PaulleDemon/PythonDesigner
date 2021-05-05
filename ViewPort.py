@@ -393,16 +393,16 @@ class View(ViewPort):
 
         if self._isdrawingPath:
 
-            self._current_path.setZValue(-1)
+            self._current_path.setZValue(-4)
 
-            if self._item1 and (isinstance(self._item1, QtWidgets.QGraphicsProxyWidget) or isinstance(self._item1, ClassNode)):
-                items = self._item1
-                if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
-                    items = self._item1.parentItem()
-
-                if isinstance(items.parentItem(), GroupNode.GroupNode):
-                    self._current_path.setZValue(-4)
-
+            # if self._item1 and (isinstance(self._item1, QtWidgets.QGraphicsProxyWidget) or isinstance(self._item1, ClassNode)):
+                # items = self._item1
+                # if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
+                #     items = self._item1.parentItem()
+                #
+                # if isinstance(items.parentItem(), GroupNode.GroupNode):
+                #     self._current_path.setZValue(-4)
+            print("Z VALUE: ", self._current_path.zValue())
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
@@ -424,7 +424,7 @@ class View(ViewPort):
                 self._current_path.setDestinationNode(item)
                 self._current_path.updatePathPos()
                 self._current_path.setZValue(self._current_path.defaultZValue)
-
+                print("Z VALUE: ", self._current_path.zValue())
             else:
                 self._scene.removeItem(self._current_path)
 
