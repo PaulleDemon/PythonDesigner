@@ -92,12 +92,23 @@ class GroupNode(QtWidgets.QGraphicsItem):
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         super(GroupNode, self).mousePressEvent(event)
     
-    def boundingRect(self) -> QtCore.QRectF:
-        # if self.childrenBoundingRect() == QtCore.QRectF():
-        #     self.scene().removeItem(self)
+    def boundingRect(self):
+        if self.childrenBoundingRect() == QtCore.QRectF():
+            self.scene().removeItem(self)
+            return
 
-        self.rect = self.childrenBoundingRect().marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
-        # self.proxy.setPos(self.proxy.mapFromParent(QtCore.QPointF(self.rect.center().x(), self.rect.y()-10)))
+        # self.rect = self.childrenBoundingRect()
+        self.proxy.setParentItem(None)
+        children = self.childrenBoundingRect()
+        self.proxy.setParentItem(self)
+
+        self.rect = children.marginsAdded(QtCore.QMarginsF(20, 50, 20, 20))
+
+        # x, y = (self.rect.center().x() - self.label.rect().center().x()), self.rect.y()
+        point = QtCore.QPointF(self.rect.center().x()-self.proxy.rect().center().x(), self.rect.y()+10)
+        self.proxy.setPos(point)
+        # self.proxy.setPos(self.mapToParent(20, 10))
+        # self.proxy.setPos(self.proxy.mapToParent(QtCore.QPointF(self.rect.center().x(), self.rect.y()-10)))
 
         return self.rect
 
