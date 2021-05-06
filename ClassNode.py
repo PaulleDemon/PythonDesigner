@@ -310,11 +310,11 @@ class ClassNode(QtWidgets.QGraphicsObject):
 
     def serialize(self):
         ordDict = OrderedDict()
-        pos = self.scenePos() #if self.parentItem() is None else self.mapToParent(self.pos())
+        pos = self.scenePos()
         ordDict['id'] = self.id
         ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
         ordDict['container']= self.container.serialize()
-        # ordDict['connections'] = [item.id for item in self.getDestination() if isinstance(item, ClassNode)]
+
         return ordDict
 
     def deserialize(self, data):

@@ -502,7 +502,7 @@ class View(ViewPort):
             future = executor.submit(load)
             data = future.result()
 
-        # print("Data: ", data)
+        print("Data: ", data)
 
         for nodes in data['ClassNodes']:
             node = ClassNode()
@@ -543,7 +543,6 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-            # path.deserialize(paths)
 
 # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)

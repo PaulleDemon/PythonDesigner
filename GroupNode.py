@@ -41,10 +41,11 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.proxy.setFlag(self.proxy.ItemIsFocusable)
 
     def groupName(self)->str:
-        return self.group_name
+        return self.label.getText()
 
     def setGroupName(self, name: str):
         self.group_name = name
+        self.label.setText(self.group_name)
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.add(item)
@@ -81,12 +82,6 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.scene().views()[0].removeGroup(self)
         # self.scene().removeItem(self)
 
-    # def pos(self) -> QtCore.QPointF:
-    #     return self.boundingRect().topLeft()
-    #
-    # def scenePos(self) -> QtCore.QPointF:
-    #     return self.mapToScene(self.boundingRect().topLeft())
-
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu()
 
@@ -100,10 +95,7 @@ class GroupNode(QtWidgets.QGraphicsItem):
         menu.exec(event.screenPos())
     
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-
-        print("Double: ", event.pos(), self.proxy.geometry())
         self.proxy.mouseDoubleClickEvent(event)
-
         super(GroupNode, self).mouseDoubleClickEvent(event)
     
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
@@ -134,22 +126,14 @@ class GroupNode(QtWidgets.QGraphicsItem):
     def serialize(self):
         ordDict = OrderedDict()
         ordDict['id'] = self.id
-        print("POSition: ", self.pos(), self.scenePos(), self.parentItem(),self.scene())
+        ordDict['groupName'] = self.groupName()
         ordDict['pos'] = {'x': self.pos().x(), 'y': self.pos().y()}
         ordDict['children'] = [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]
-
-        # print("Moving...")
-        # self.setPos(self.pos().x(), self.pos().y())
-
         return ordDict
 
     def deserialize(self, data):
         self.id = data['id']
-        print("pos: ", self.mapToScene(data['pos']['x'], data['pos']['y']))
-        # self.scenePos().setX(data['pos']['x'])
-        # self.scenePos().setY(data['pos']['y'])
-        # self.setPos(self.mapToScene(QtCore.QPointF(data['pos']['x'], data['pos']['y'])))
+        self.setGroupName(data['groupName'])
         self.setPos(QtCore.QPointF(data['pos']['x'], data['pos']['y']))
-        print("Current pos: ", self.scenePos())
         self.setZValue(self.defaultZValue)
 
