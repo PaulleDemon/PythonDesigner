@@ -2,12 +2,12 @@ import json
 import concurrent.futures
 from collections import OrderedDict
 
+import CustomWidgets.EditableLabel
 import ResourcePaths
 from CustomWidgets import ButtonGroup
 import GroupNode
 from ClassNode import ClassNode
 from Path import *
-
 
 SELECTION_MODE = 0
 CONNECT_MODE = 1
@@ -66,7 +66,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setObjectName("View")
         self.initUI()
 
-    def initUI(self):
+    def initUI(self):  # initializes tools on the left side (select tool, path tool, cutter tool)
 
         self.btnGrp = ButtonGroup.ButtonGroup(ButtonGroup.VERTICAL_LAYOUT, parent=self)
         self.btnGrp.setFixedBtnSize(QtCore.QSize(50, 50))
@@ -84,7 +84,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tool", checked=True)
         self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tool")
         self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tool")
-
 
     def bgColor(self):
         return self._background_color
@@ -119,9 +118,8 @@ class ViewPort(QtWidgets.QGraphicsView):
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
 
-    def changeMode(self, mode: int):
+    def changeMode(self, mode: int):  # changes mode (Available modes: Connect mode, selectMode, cut mode)
         self.current_mode = mode
-        # self.setCursor(QtGui.QIcon())
 
         if self.current_mode == CONNECT_MODE:
             cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_TOOL_CURSOR).scaled(30, 30))
@@ -148,7 +146,7 @@ class ViewPort(QtWidgets.QGraphicsView):
             item.setZValue(item.defaultZValue + 1)
             self._selected_items.add(item)
 
-    def toggleToolBar(self):
+    def toggleToolBar(self):  # animates the tool bar
         self.anim = QtCore.QPropertyAnimation(self.btnGrp, b"pos")
         self.anim.setDuration(250)
 
@@ -163,20 +161,19 @@ class ViewPort(QtWidgets.QGraphicsView):
         # self.anim.finished.connect(lambda: self.btnGrp.hide() if self.btnGrp.visible else self.btnGrp.show())
         self.anim.start(self.anim.DeleteWhenStopped)
 
-    def removeGroup(self, grp: QtWidgets.QGraphicsItem):
+    def removeGroup(self, grp: QtWidgets.QGraphicsItem):  # removes the group from the scene and group variable
         self.scene().removeItem(grp)
         self.groups.discard(grp)
 
-    def addClass(self, pos: QtCore.QPoint):
+    def addClass(self, pos: QtCore.QPoint):  # adds new class
         node = ClassNode()
         node.setPos(self.mapToScene(pos))
 
         self._scene.addItem(node)
 
-    def moveToGroup(self, grp):
+    def moveToGroup(self, grp):  # moves selected items to group
 
         selectedItems = self._scene.selectedItems()
-
         for item in selectedItems:
             if isinstance(item, ClassNode) and not item.parentItem():
                 item.setParentItem(grp)
@@ -217,16 +214,23 @@ class ViewPort(QtWidgets.QGraphicsView):
         items = self._scene.selectedItems()
         itemAt = self._scene.itemAt(self.mapToScene(event.pos()), QtGui.QTransform())
 
-        add_to_grp = QtWidgets.QMenu("Add to Group")
+        def removeClassFromGroup(scene):  # removes selected items from group if it in a group
+            for item in scene.selectedItems():
+                if isinstance(item, ClassNode):
+                    item.removeParent()
 
-        if itemAt or len(items) == 1:
+        add_to_grp = QtWidgets.QMenu("Add to Group")
+        remove_from_group = QtWidgets.QAction("Remove from group")
+        remove_from_group.triggered.connect(lambda: removeClassFromGroup(self.scene()))
+
+        if itemAt or (len(items) == 1 and not isinstance(items[0], ClassNode)):
             super(ViewPort, self).contextMenuEvent(event)
             return
 
         if any(isinstance(item, ClassNode) for item in items):
 
             for grp in self.groups:
-                action = QtWidgets.QAction(str(grp), self)
+                action = QtWidgets.QAction(grp.groupName(), self)
                 action.triggered.connect(lambda: self.moveToGroup(grp))
                 add_to_grp.addAction(action)
 
@@ -235,6 +239,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         menu.addAction(add_class)
         menu.addMenu(add_to_grp)
+        menu.addAction(remove_from_group)
 
         menu.exec(self.mapToParent(event.pos()))
 
@@ -256,7 +261,8 @@ class View(ViewPort):
                 item.setSelected(True)
             return
 
-        if event.modifiers()==QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
+        if event.modifiers() == QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
+            # starts group rectangle
             self._groupRectangle = QtWidgets.QGraphicsRectItem()
             self._groupRectangle.setBrush(self._groupRectangleBgBrush)
             self._scene.addItem(self._groupRectangle)
@@ -265,8 +271,9 @@ class View(ViewPort):
             self._groupRectangleStartPos = pos
             return
 
-        if self.current_mode == CONNECT_MODE or (event.modifiers() == QtCore.Qt.ControlModifier and event.button() == QtCore.Qt.LeftButton):
-
+        if self.current_mode == CONNECT_MODE or (
+                event.modifiers() == QtCore.Qt.ControlModifier and event.button() == QtCore.Qt.LeftButton):
+            # draws paths
             item = self._scene.itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
                 self._isdrawingPath = True
@@ -275,7 +282,9 @@ class View(ViewPort):
                 self._item1 = item
                 return
 
-        if self.current_mode == CUT_MODE or (event.modifiers() == QtCore.Qt.AltModifier and event.button() == QtCore.Qt.LeftButton):
+        if self.current_mode == CUT_MODE or (
+                event.modifiers() == QtCore.Qt.AltModifier and event.button() == QtCore.Qt.LeftButton):
+            # draws cut mode
             self._line_cutter_painterPath = QtGui.QPainterPath(pos)
             self._line_cutter_path_item = QtWidgets.QGraphicsPathItem()
             self._line_cutter_path_item.setPen(self._cutter_pen)
@@ -293,7 +302,7 @@ class View(ViewPort):
             else:
                 super().mousePressEvent(event)
 
-        elif event.button() == QtCore.Qt.MidButton:
+        elif event.button() == QtCore.Qt.MidButton:  # panning
 
             self._mousePressed = True
             self._isPanning = True
@@ -311,7 +320,6 @@ class View(ViewPort):
             return
 
         if self._isdrawingPath:
-
             self._current_path.setDestinationPoints(pos)
             self._scene.update(self.sceneRect())
 
@@ -333,7 +341,7 @@ class View(ViewPort):
         else:
             super(ViewPort, self).mouseMoveEvent(event)
 
-    def removeIntersectingPaths(self):
+    def removeIntersectingPaths(self):  # removes all the paths over which the cut path is drawn
 
         def filterInstances(items, instanceOf):
             for _item in items:
@@ -349,14 +357,12 @@ class View(ViewPort):
 
         if self._isdrawingGroupRect:
 
-            group = GroupNode.GroupNode(self._groupRectangle.rect())
+            group = GroupNode.GroupNode(self._groupRectangle.rect(), f"Module {len(self.groups)}")
             colliding_items = self._groupRectangle.collidingItems()
-
             if colliding_items:
 
                 for item in colliding_items:
                     if type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
-
                         if isinstance(item, QtWidgets.QGraphicsProxyWidget):
                             item = item.parentItem()
 
@@ -367,11 +373,10 @@ class View(ViewPort):
                         item.setParentItem(group)
                         group.addToGroup(item)
 
-                    group.setZValue(group.defaultZValue)
-                    self._scene.addItem(group)
-                    self.groups.add(group)
-
-                if not group.childItems():
+                group.setZValue(group.defaultZValue)
+                self._scene.addItem(group)
+                self.groups.add(group)
+                if not group.childItems() or len(group.childItems()) < 2:
                     self._scene.removeItem(group)
                     self.groups.remove(group)
 
@@ -415,7 +420,7 @@ class View(ViewPort):
                 self._current_path.setDestinationNode(item)
                 self._current_path.updatePathPos()
                 self._current_path.setZValue(self._current_path.defaultZValue)
-                print("Z VALUE: ", self._current_path.zValue())
+
             else:
                 self._scene.removeItem(self._current_path)
 
@@ -543,7 +548,6 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-
 # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-    #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
-    #     super(ViewPort, self).mouseDoubleClickEvent(event)
+#     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
+#     super(ViewPort, self).mouseDoubleClickEvent(event)

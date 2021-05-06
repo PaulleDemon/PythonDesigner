@@ -94,7 +94,7 @@ class Container(QtWidgets.QWidget):
         var.deleted.connect(self.adjust)
         self.method_layout.insertRow(self.method_layout.count() - 1, var)
 
-    def adjust(self):
+    def adjust(self):  # adjusts the size of the class after a label is removed
         QtCore.QTimer.singleShot(10, self.adjustSize)
 
     def setTitle(self, label: str = ""):
@@ -268,6 +268,10 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.scene().removeItem(self)
         self.removed.emit()
 
+    def removeParent(self):
+        self.setParentItem(None)
+        self.removed.emit()
+
     def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
 
         menu = QtWidgets.QMenu()
@@ -275,7 +279,13 @@ class ClassNode(QtWidgets.QGraphicsObject):
         remove = QtWidgets.QAction("Remove Class")
         remove.triggered.connect(self.removeNode)
 
-        menu.addAction(remove)
+        removeFromGrp = QtWidgets.QAction("Remove From Group")
+        removeFromGrp.triggered.connect(self.removeParent)
+
+        if not self.parentItem():
+            removeFromGrp.setDisabled(True)
+
+        menu.addActions([remove, removeFromGrp])
         menu.exec(event.screenPos())
 
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:

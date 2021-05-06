@@ -47,7 +47,7 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.add(item)
-        # item.removed.connect(lambda: self.removeChild(item))  # classNode
+        item.removed.connect(lambda: self.removeChild(item))  # classNode
 
     def removeItemFromGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.discard(item)
