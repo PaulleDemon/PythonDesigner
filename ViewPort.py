@@ -1,3 +1,7 @@
+import json
+import concurrent.futures
+from collections import OrderedDict
+
 import ResourcePaths
 from CustomWidgets import ButtonGroup
 import GroupNode
@@ -185,48 +189,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
 
-    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-
-
-        menu = QtWidgets.QMenu(self)
-
-        add_class = QtWidgets.QAction("Add Class")
-        add_class.triggered.connect(lambda: self.addClass(event.pos()))
-
-        items = self._scene.selectedItems()
-
-        add_to_grp = QtWidgets.QMenu("Add to Group")
-
-        if any(isinstance(item, ClassNode) for item in items):
-
-            for grp in self.groups:
-                action = QtWidgets.QAction(str(grp), self)
-                action.triggered.connect(lambda: self.moveToGroup(grp))
-                add_to_grp.addAction(action)
-
-            if not self.groups:
-                add_to_grp.setDisabled(True)
-
-        else:
-            super(ViewPort, self).contextMenuEvent(event)
-            return
-
-        menu.addAction(add_class)
-        menu.addMenu(add_to_grp)
-
-        menu.exec(self.mapToParent(event.pos()))
-
-    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-
-        if event.key() & QtCore.Qt.Key_T and not self._scene.focusItem():
-            self.toggleToolBar()
-
-        if event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.btnGrp.focusNext()
-        
-        else:
-            super(ViewPort, self).keyPressEvent(event)
-
     def wheelEvent(self, event: QtGui.QWheelEvent):
 
         if self.transform().m11() >= 2 or self.transform().m11() < 0.5:
@@ -245,6 +207,40 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.scale(factor, factor)
 
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+
+        menu = QtWidgets.QMenu(self)
+
+        add_class = QtWidgets.QAction("Add Class")
+        add_class.triggered.connect(lambda: self.addClass(event.pos()))
+
+        items = self._scene.selectedItems()
+        itemAt = self._scene.itemAt(self.mapToScene(event.pos()), QtGui.QTransform())
+
+        add_to_grp = QtWidgets.QMenu("Add to Group")
+
+        if itemAt or len(items) == 1:
+            super(ViewPort, self).contextMenuEvent(event)
+            return
+
+        if any(isinstance(item, ClassNode) for item in items):
+
+            for grp in self.groups:
+                action = QtWidgets.QAction(str(grp), self)
+                action.triggered.connect(lambda: self.moveToGroup(grp))
+                add_to_grp.addAction(action)
+
+            if not self.groups or not items:
+                add_to_grp.setDisabled(True)
+
+        menu.addAction(add_class)
+        menu.addMenu(add_to_grp)
+
+        menu.exec(self.mapToParent(event.pos()))
+
+
+class View(ViewPort):
+
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
         pos = self.mapToScene(event.pos())
@@ -260,7 +256,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 item.setSelected(True)
             return
 
-        if event.button() & QtCore.Qt.RightButton:
+        if event.modifiers()==QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
             self._groupRectangle = QtWidgets.QGraphicsRectItem()
             self._groupRectangle.setBrush(self._groupRectangleBgBrush)
             self._scene.addItem(self._groupRectangle)
@@ -371,10 +367,9 @@ class ViewPort(QtWidgets.QGraphicsView):
                         item.setParentItem(group)
                         group.addToGroup(item)
 
-
-                group.setZValue(group.defaultZValue)
-                self._scene.addItem(group)
-                self.groups.add(group)
+                    group.setZValue(group.defaultZValue)
+                    self._scene.addItem(group)
+                    self.groups.add(group)
 
                 if not group.childItems():
                     self._scene.removeItem(group)
@@ -398,16 +393,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         if self._isdrawingPath:
 
-            self._current_path.setZValue(-1)
-
-            if self._item1 and (isinstance(self._item1, QtWidgets.QGraphicsProxyWidget) or isinstance(self._item1, ClassNode)):
-                items = self._item1
-                if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
-                    items = self._item1.parentItem()
-
-                if isinstance(items.parentItem(), GroupNode.GroupNode):
-                    self._current_path.setZValue(-4)
-
+            self._current_path.setZValue(-4)
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
@@ -429,7 +415,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 self._current_path.setDestinationNode(item)
                 self._current_path.updatePathPos()
                 self._current_path.setZValue(self._current_path.defaultZValue)
-
+                print("Z VALUE: ", self._current_path.zValue())
             else:
                 self._scene.removeItem(self._current_path)
 
@@ -454,6 +440,110 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         super(ViewPort, self).mouseReleaseEvent(event)
 
-    # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+
+        if event.key() == QtCore.Qt.Key_T and not self._scene.focusItem():
+            self.toggleToolBar()
+
+        elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.btnGrp.focusNext()
+
+        elif event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.serialize()
+
+        elif event.key() == QtCore.Qt.Key_O and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.deSerialize()
+
+        else:
+            super(ViewPort, self).keyPressEvent(event)
+
+    def serialize(self):
+        print("Serializing...")
+        classNodes = []
+        paths = []
+        groupNode = []
+        for item in self._scene.items():
+            if isinstance(item, ClassNode):
+                classNodes.append(item.serialize())
+
+            elif isinstance(item, Path):
+                paths.append(item.serialize())
+
+            elif isinstance(item, GroupNode.GroupNode):
+                groupNode.append(item.serialize())
+
+        data = OrderedDict({"ClassNodes": classNodes,
+                            "Paths": paths,
+                            "GroupNodes": groupNode})
+
+        def save():
+            with open("datafile.json", "w") as write:
+                json.dump(data, write, indent=2)
+
+            print("Serialize complete.")
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            _ = executor.submit(save)
+
+    def deSerialize(self):
+
+        self._scene = QtWidgets.QGraphicsScene()
+        self._selected_items = set()
+
+        self.setScene(self._scene)
+
+        def load():
+            with open("datafile.json", "r") as read:
+                data = OrderedDict(json.load(read))
+
+            return data
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(load)
+            data = future.result()
+
+        print("Data: ", data)
+
+        for nodes in data['ClassNodes']:
+            node = ClassNode()
+            node.deserialize(nodes)
+            self._scene.addItem(node)
+
+        for grpNodes in data['GroupNodes']:
+
+            groupNode = GroupNode.GroupNode()
+            children = grpNodes['children']
+            for item in self._scene.items():
+                if isinstance(item, ClassNode):
+                    if item.id in grpNodes['children']:
+                        item.setParentItem(groupNode)
+                        children.remove(item.id)
+
+                if not children:
+                    break
+
+            groupNode.deserialize(grpNodes)
+            self._scene.addItem(groupNode)
+
+        for paths in data['Paths']:
+            path = Path()
+
+            for item in self._scene.items():
+                if isinstance(item, ClassNode):
+                    if item.id == paths['source']:
+                        path.setSourceNode(item)
+                        item.addPath(path)
+
+                    if item.id == paths['destination']:
+                        path.setDestinationNode(item)
+                        item.addPath(path)
+
+                if path.getDestinationNode() and path.getSourceNode():
+                    path.deserialize(paths)
+                    self._scene.addItem(path)
+                    break
+
+
+# def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
     #     super(ViewPort, self).mouseDoubleClickEvent(event)

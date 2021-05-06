@@ -1,4 +1,6 @@
 import textwrap
+
+from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 
@@ -49,8 +51,11 @@ class EditableLabel(QtWidgets.QWidget):
         self.deleteLater()
         self.deleted.emit()
 
-    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-        if self._label.contentsRect().contains(event.pos()):
+    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent, pos=None):
+
+        pos = event.pos() if self.parent() else self.mapFromParent(event.pos())
+        if self._label.geometry().contains(pos):
+
             self._label.hide()
             self._edit_label.show()
             self._edit_label.setText(self._label.text())
@@ -180,6 +185,23 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         menu.addActions([add_comment, remove_comment, edit_comment])
 
         menu.popup(self.mapToGlobal(event.pos()))
+
+    def serialize(self):
+        ordDict = OrderedDict()
+
+        ordDict['text'] = self.getText()
+        ordDict['type'] = self.type
+        ordDict['memberType'] = self.member_type
+        ordDict['comment'] = self.comment
+
+        return ordDict
+
+    def deserialize(self, data):
+        self.setText(data['text'])
+        self.setType(data['type'])
+        self.setMemberType(data['memberType'])
+        self.comment = data['comment']
+        self._setTooltip()
 
 
 class CommentDialog(QtWidgets.QDialog):

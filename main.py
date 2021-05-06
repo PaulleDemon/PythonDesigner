@@ -4,14 +4,14 @@ from PyQt5 import QtWidgets
 
 from Path import Path
 from ClassNode import ClassNode
-from ViewPort import ViewPort
+from ViewPort import ViewPort, View
 
 
 def main():
     if __name__ == "__main__":
         app = QtWidgets.QApplication(sys.argv)
 
-        view = ViewPort()
+        view = View()
         # view.setStyleSheet("#View{qproperty-GridColor: #615e5e; qproperty-BgColor: #c4c4c4; qproperty-PenWidth: 1.2;}")
 
         cls = ClassNode()

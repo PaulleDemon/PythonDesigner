@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 from CustomWidgets.EditableLabel import EditableLabel, ClassType
@@ -31,6 +32,7 @@ class Container(QtWidgets.QWidget):
         self.body_layout.setContentsMargins(2, 2, 2, 2)
 
         self.class_title = EditableLabel(defaultText="Class Name")
+        self.class_title.setMaximumSize(self.width(), 50)
         self.class_title.enableToolTip("Class Name")
         self.class_title.setValidator()
 
@@ -72,14 +74,20 @@ class Container(QtWidgets.QWidget):
 
     def addVariableName(self):
         var = ClassType(parent=self, placeHolder="Variable Name", defaultText="Variable Name")
-        var.setValidator()
+        self.insertToVarLayout(var)
+        # self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
+    def insertToVarLayout(self, var):
+        var.setValidator()
         var.setMinimumHeight(30)
         var.deleted.connect(self.adjust)
         self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
     def addMethodName(self):
         var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+        self.insertIntoMethodLayout(var)
+
+    def insertIntoMethodLayout(self, var):
         var.setValidator()
 
         var.setMinimumHeight(30)
@@ -94,19 +102,65 @@ class Container(QtWidgets.QWidget):
             label = self._title
         self.title.setText(label)
 
+    def setClassName(self, text: str = ""):
+        self.class_title.setText(text)
+
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super(Container, self).resizeEvent(event)
         self.resized.emit()
 
+    def serialize(self):
+        ordDict = OrderedDict()
 
-class ClassNode(QtWidgets.QGraphicsItem):
+        ordDict['className'] = self.class_title.getText()
 
-    # geomertyChanged = QtCore.pyqtSignal()
+        varCount = self.variable_layout.count()
+        varList = []
+
+        for x in range(0, varCount):
+            item = self.variable_layout.itemAt(x)
+            if item and isinstance(item.widget(), ClassType):
+                varList.append(item.widget().serialize())
+
+        ordDict['variables'] = varList
+
+        methodCount = self.method_layout.count()
+        methodList = []
+
+        for x in range(0, methodCount):
+            item = self.method_layout.itemAt(x)
+            if item and isinstance(item.widget(), ClassType):
+                methodList.append(item.widget().serialize())
+
+        ordDict['methods'] = methodList
+
+        return ordDict
+
+    def deserialize(self, data):
+
+        self.setClassName(data['className'])
+
+        for variable in data['variables']:
+            var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+            var.deserialize(variable)
+            self.insertToVarLayout(var)
+
+        for method in data['methods']:
+            meth = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+            meth.deserialize(method)
+            self.insertIntoMethodLayout(meth)
+
+
+class ClassNode(QtWidgets.QGraphicsObject):
+
+    removed = QtCore.pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
         self._path = set()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+
+        self.id = id(self)
 
         self._title = "Class: "
         self.defaultZValue = 0
@@ -208,12 +262,18 @@ class ClassNode(QtWidgets.QGraphicsItem):
 
         return super(ClassNode, self).itemChange(change, value)
 
+    def removeNode(self):
+        self.removeConnectedPaths()
+
+        self.scene().removeItem(self)
+        self.removed.emit()
+
     def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
 
         menu = QtWidgets.QMenu()
 
         remove = QtWidgets.QAction("Remove Class")
-        remove.triggered.connect(lambda: [self.removeConnectedPaths(), self.scene().removeItem(self)])
+        remove.triggered.connect(self.removeNode)
 
         menu.addAction(remove)
         menu.exec(event.screenPos())
@@ -244,3 +304,19 @@ class ClassNode(QtWidgets.QGraphicsItem):
         painter.drawRect(self.boundingRect().adjusted(-1, -1, 1, 1))
 
         painter.restore()
+
+    def serialize(self):
+        ordDict = OrderedDict()
+        pos = self.scenePos()
+        ordDict['id'] = self.id
+        ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
+        ordDict['container']= self.container.serialize()
+
+        return ordDict
+
+    def deserialize(self, data):
+
+        self.id = data['id']
+        pos = QtCore.QPointF(data['pos']['x'], data['pos']['y'])
+        self.setPos(pos)
+        self.container.deserialize(data['container'])
