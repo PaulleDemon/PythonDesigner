@@ -6,6 +6,8 @@ import ClassNode
 from CustomWidgets.EditableLabel import EditableLabel
 
 
+# todo: deserializing position wrong
+
 class GroupNode(QtWidgets.QGraphicsItem):
 
     def __init__(self, rect: QtCore.QRectF=QtCore.QRectF(), group_name="Module",*args, **kwargs):
@@ -46,7 +48,7 @@ class GroupNode(QtWidgets.QGraphicsItem):
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.add(item)
-        item.removed.connect(lambda: self.removeChild(item))  # classNode
+        # item.removed.connect(lambda: self.removeChild(item))  # classNode
 
     def removeItemFromGroup(self, item: QtWidgets.QGraphicsItem):
         self.group_members.discard(item)
@@ -79,8 +81,11 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.scene().views()[0].removeGroup(self)
         # self.scene().removeItem(self)
 
-    def pos(self) -> QtCore.QPointF:
-        return QtCore.QPointF(self.rect.x(), self.rect.y())
+    # def pos(self) -> QtCore.QPointF:
+    #     return self.boundingRect().topLeft()
+    #
+    # def scenePos(self) -> QtCore.QPointF:
+    #     return self.mapToScene(self.boundingRect().topLeft())
 
     def contextMenuEvent(self, event) -> None:
         menu = QtWidgets.QMenu()
@@ -116,7 +121,6 @@ class GroupNode(QtWidgets.QGraphicsItem):
         point = QtCore.QPointF(self.rect.center().x()-self.proxy.rect().center().x(), self.rect.y()+10)
         self.proxy.setPos(point)
 
-
         return self.rect
 
     def paint(self, painter: QtGui.QPainter, option, widget):
@@ -130,13 +134,22 @@ class GroupNode(QtWidgets.QGraphicsItem):
     def serialize(self):
         ordDict = OrderedDict()
         ordDict['id'] = self.id
-        ordDict['pos'] = {'x': self.scenePos().x(), 'y': self.scenePos().y()}
+        print("POSition: ", self.pos(), self.scenePos(), self.parentItem(),self.scene())
+        ordDict['pos'] = {'x': self.pos().x(), 'y': self.pos().y()}
         ordDict['children'] = [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]
+
+        # print("Moving...")
+        # self.setPos(self.pos().x(), self.pos().y())
 
         return ordDict
 
     def deserialize(self, data):
         self.id = data['id']
+        print("pos: ", self.mapToScene(data['pos']['x'], data['pos']['y']))
+        # self.scenePos().setX(data['pos']['x'])
+        # self.scenePos().setY(data['pos']['y'])
+        # self.setPos(self.mapToScene(QtCore.QPointF(data['pos']['x'], data['pos']['y'])))
         self.setPos(QtCore.QPointF(data['pos']['x'], data['pos']['y']))
+        print("Current pos: ", self.scenePos())
         self.setZValue(self.defaultZValue)
 

@@ -230,7 +230,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 action.triggered.connect(lambda: self.moveToGroup(grp))
                 add_to_grp.addAction(action)
 
-            if not self.groups:
+            if not self.groups or not items:
                 add_to_grp.setDisabled(True)
 
         menu.addAction(add_class)
@@ -367,9 +367,9 @@ class View(ViewPort):
                         item.setParentItem(group)
                         group.addToGroup(item)
 
-                group.setZValue(group.defaultZValue)
-                self._scene.addItem(group)
-                self.groups.add(group)
+                    group.setZValue(group.defaultZValue)
+                    self._scene.addItem(group)
+                    self.groups.add(group)
 
                 if not group.childItems():
                     self._scene.removeItem(group)
@@ -394,15 +394,6 @@ class View(ViewPort):
         if self._isdrawingPath:
 
             self._current_path.setZValue(-4)
-
-            # if self._item1 and (isinstance(self._item1, QtWidgets.QGraphicsProxyWidget) or isinstance(self._item1, ClassNode)):
-                # items = self._item1
-                # if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
-                #     items = self._item1.parentItem()
-                #
-                # if isinstance(items.parentItem(), GroupNode.GroupNode):
-                #     self._current_path.setZValue(-4)
-            print("Z VALUE: ", self._current_path.zValue())
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode) \
@@ -481,7 +472,9 @@ class View(ViewPort):
             elif isinstance(item, GroupNode.GroupNode):
                 groupNode.append(item.serialize())
 
-        data = OrderedDict({"ClassNodes": classNodes, "Paths": paths, "GroupNodes": groupNode})
+        data = OrderedDict({"ClassNodes": classNodes,
+                            "Paths": paths,
+                            "GroupNodes": groupNode})
 
         def save():
             with open("datafile.json", "w") as write:
@@ -498,7 +491,6 @@ class View(ViewPort):
         self._selected_items = set()
 
         self.setScene(self._scene)
-        print(self.scene())
 
         def load():
             with open("datafile.json", "r") as read:
@@ -510,11 +502,28 @@ class View(ViewPort):
             future = executor.submit(load)
             data = future.result()
 
-        print("Data: ", data)
+        # print("Data: ", data)
+
         for nodes in data['ClassNodes']:
             node = ClassNode()
             node.deserialize(nodes)
             self._scene.addItem(node)
+
+        for grpNodes in data['GroupNodes']:
+
+            groupNode = GroupNode.GroupNode()
+            children = grpNodes['children']
+            for item in self._scene.items():
+                if isinstance(item, ClassNode):
+                    if item.id in grpNodes['children']:
+                        item.setParentItem(groupNode)
+                        children.remove(item.id)
+
+                if not children:
+                    break
+
+            groupNode.deserialize(grpNodes)
+            self._scene.addItem(groupNode)
 
         for paths in data['Paths']:
             path = Path()
@@ -534,22 +543,7 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-            path.deserialize(paths)
-
-        for grpNodes in data['GroupNodes']:
-
-            groupNode = GroupNode.GroupNode()
-            children = grpNodes['children']
-            for item in self._scene.items():
-                if isinstance(item, ClassNode):
-                    if item.id in grpNodes['children']:
-                        item.setParentItem(groupNode)
-                        children.pop()
-
-                if len(children) == 0:
-                    break
-
-            self._scene.addItem(groupNode)
+            # path.deserialize(paths)
 
 # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)

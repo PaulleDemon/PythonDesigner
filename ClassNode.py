@@ -32,6 +32,7 @@ class Container(QtWidgets.QWidget):
         self.body_layout.setContentsMargins(2, 2, 2, 2)
 
         self.class_title = EditableLabel(defaultText="Class Name")
+        self.class_title.setMaximumSize(self.width(), 50)
         self.class_title.enableToolTip("Class Name")
         self.class_title.setValidator()
 
@@ -149,6 +150,8 @@ class Container(QtWidgets.QWidget):
             meth.deserialize(method)
             self.insertIntoMethodLayout(meth)
 
+
+# todo: class rect changes when there is a very long class name
 
 # class ClassNode(QtWidgets.QGraphicsItem):
 class ClassNode(QtWidgets.QGraphicsObject):
@@ -307,7 +310,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
 
     def serialize(self):
         ordDict = OrderedDict()
-        pos = self.scenePos() if self.parentItem() is None else self.mapToParent(self.pos())
+        pos = self.scenePos() #if self.parentItem() is None else self.mapToParent(self.pos())
         ordDict['id'] = self.id
         ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
         ordDict['container']= self.container.serialize()
