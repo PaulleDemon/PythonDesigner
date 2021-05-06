@@ -6,8 +6,6 @@ import ClassNode
 from CustomWidgets.EditableLabel import EditableLabel
 
 
-# todo: deserializing position wrong
-
 class GroupNode(QtWidgets.QGraphicsItem):
 
     def __init__(self, rect: QtCore.QRectF=QtCore.QRectF(), group_name="Module",*args, **kwargs):

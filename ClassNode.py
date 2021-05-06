@@ -151,9 +151,6 @@ class Container(QtWidgets.QWidget):
             self.insertIntoMethodLayout(meth)
 
 
-# todo: class rect changes when there is a very long class name
-
-# class ClassNode(QtWidgets.QGraphicsItem):
 class ClassNode(QtWidgets.QGraphicsObject):
 
     removed = QtCore.pyqtSignal()
