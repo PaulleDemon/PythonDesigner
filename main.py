@@ -2,13 +2,12 @@ import sys
 
 from PyQt5 import QtWidgets
 
-from Path import Path
-from ClassNode import ClassNode
-from ViewPort import ViewPort, View
+from DesignerItems.ClassNode import ClassNode
+from ViewPort import View
 
 
 def main():
-    if __name__ == "__main__":
+
         app = QtWidgets.QApplication(sys.argv)
 
         view = View()

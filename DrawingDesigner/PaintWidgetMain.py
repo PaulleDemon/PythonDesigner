@@ -1,9 +1,10 @@
 import sys
-import Tools
+
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 from DrawingDesigner import PaintViewPort, Properties, PageTreeView
-from Widgets import Widgets
+from . import Widgets
+from . import Tools
 
 
 class PaintWidget(QtWidgets.QWidget):
@@ -19,11 +20,11 @@ class PaintWidget(QtWidgets.QWidget):
         self.tools = Tools.Tools()
 
         tool_splitter.addWidget(self.tools)
-        tool_splitter.addWidget(Widgets())
+        tool_splitter.addWidget(Widgets.Widgets())
 
         properties_splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        properties_splitter.addWidget(Properties.PropertiesPanel())
         properties_splitter.addWidget(PageTreeView.PageTreeView())
+        properties_splitter.addWidget(Properties.PropertiesPanel())
 
         main_splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         main_splitter.addWidget(tool_splitter)
@@ -34,10 +35,4 @@ class PaintWidget(QtWidgets.QWidget):
         self.layout().addWidget(main_splitter)
 
 
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
 
-    tool = PaintWidget()
-    tool.show()
-
-    sys.exit(app.exec())

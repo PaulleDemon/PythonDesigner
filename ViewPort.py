@@ -1,13 +1,11 @@
 import json
 import concurrent.futures
-from collections import OrderedDict
 
-import CustomWidgets.EditableLabel
-import ResourcePaths
+from Resources import ResourcePaths
 from CustomWidgets import ButtonGroup
-import GroupNode
-from ClassNode import ClassNode
-from Path import *
+from DesignerItems import GroupNode
+from DesignerItems.ClassNode import ClassNode
+from DesignerItems.Path import *
 
 SELECTION_MODE = 0
 CONNECT_MODE = 1
@@ -81,9 +79,9 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.path_btn.toggled.connect(lambda: self.changeMode(CONNECT_MODE))
         self.cut_path_btn.toggled.connect(lambda: self.changeMode(CUT_MODE))
 
-        self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tool", checked=True)
-        self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tool")
-        self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tool")
+        self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tools", checked=True)
+        self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tools")
+        self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tools")
 
     def bgColor(self):
         return self._background_color
@@ -490,7 +488,7 @@ class View(ViewPort):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             _ = executor.submit(save)
 
-    def deSerialize(self):
+    def deSerialize(self):  # todo: deserializing groups position doesn't work correctly
 
         self._scene = QtWidgets.QGraphicsScene()
         self._selected_items = set()

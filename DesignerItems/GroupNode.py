@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 
 from collections import OrderedDict
 
-import ClassNode
+from DesignerItems import ClassNode
 from CustomWidgets.EditableLabel import EditableLabel
 
 
