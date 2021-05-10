@@ -73,9 +73,10 @@ class ButtonGroup(QtWidgets.QWidget):
         return btn
 
     def clicked(self, btn):
-        print("YES")
-        print("Btn: ", btn)
         self.toggled.emit(btn)
+
+    def getCheckedBtn(self):
+        return self.btn_grp.checkedButton()
 
     def setFixedBtnSize(self, size: QtCore.QSize):
 

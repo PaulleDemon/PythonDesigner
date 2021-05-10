@@ -75,13 +75,15 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_TOOL))
         self.cut_path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_CUTTER))
 
-        self.select_btn.toggled.connect(lambda: self.changeMode(SELECTION_MODE))
-        self.path_btn.toggled.connect(lambda: self.changeMode(CONNECT_MODE))
-        self.cut_path_btn.toggled.connect(lambda: self.changeMode(CUT_MODE))
+        # self.select_btn.toggled.connect(lambda: self.changeMode(SELECTION_MODE))
+        # self.path_btn.toggled.connect(lambda: self.changeMode(CONNECT_MODE))
+        # self.cut_path_btn.toggled.connect(lambda: self.changeMode(CUT_MODE))
 
         self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tools", checked=True)
         self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tools")
         self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tools")
+
+        self.btnGrp.toggled.connect(self.changeMode)
 
     def bgColor(self):
         return self._background_color
@@ -116,8 +118,13 @@ class ViewPort(QtWidgets.QGraphicsView):
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
 
-    def changeMode(self, mode: int):  # changes mode (Available modes: Connect mode, selectMode, cut mode)
-        self.current_mode = mode
+    def changeMode(self, btn, mode: int=None):  # changes mode (Available modes: Connect mode, selectMode, cut mode)
+
+        if mode is None:
+            mode = {self.select_btn: SELECTION_MODE, self.path_btn: CONNECT_MODE, self.cut_path_btn: CUT_MODE}[btn]
+
+        print("Mode: ", mode)
+        self.current_mode = mode  # todo: the cursor doesn't change
 
         if self.current_mode == CONNECT_MODE:
             cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_TOOL_CURSOR).scaled(30, 30))
