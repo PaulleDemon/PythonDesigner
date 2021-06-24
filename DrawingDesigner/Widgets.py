@@ -29,5 +29,4 @@ class Widgets(QtWidgets.QWidget):
 
         self.v_layout.addWidget(label)
         self.v_layout.addWidget(button)
-        self.v_layout.addWidget(QtWidgets.QPushButton("noooo"))
-        self.v_layout.addWidget(QtWidgets.QPushButton("YAAAAA"))
+

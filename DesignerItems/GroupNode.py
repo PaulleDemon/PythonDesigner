@@ -46,15 +46,18 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.label.setText(self.group_name)
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
+        print("Added: ", item)
         self.group_members.add(item)
+        item.setParentItem(self)
         item.removed.connect(lambda: self.removeChild(item))  # classNode
 
     def removeItemFromGroup(self, item: QtWidgets.QGraphicsItem):
+        print("Discarding...", self.group_members)
         self.group_members.discard(item)
 
     def removeChild(self, item):
         self.removeItemFromGroup(item)
-
+        print("set: ", self.group_members)
         if not self.group_members:
             self.scene().removeItem(self)
 

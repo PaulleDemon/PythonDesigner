@@ -180,8 +180,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.setFlag(self.ItemSendsGeometryChanges, True)
         # self.setFlag(self.ItemIsFocusable, True)
 
-        self.proxy_geometry_old = None
-
         self.setZValue(self.defaultZValue)
 
         self.InitNode()
@@ -269,6 +267,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.removed.emit()
 
     def removeParent(self):
+        print(self.parentItem())
         self.setParentItem(None)
         self.removed.emit()
 
