@@ -13,6 +13,15 @@ SELECTION_MODE = 0
 CONNECT_MODE = 1
 CUT_MODE = 2
 
+_style = """
+         #View{{
+          qproperty-GridColor: {grid_color};
+          qproperty-BgColor: {grid_bg_color}; 
+          qproperty-PenWidth: {pen_width};
+          }}
+          
+         """
+
 
 class ViewPort(QtWidgets.QGraphicsView):
 
@@ -66,6 +75,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setObjectName("View")
         self.initUI()
 
+        self.class_node_theme = {}
+
     def initUI(self):  # initializes tools on the left side (select tool, path tool, cutter tool)
 
         self.btnGrp = ButtonGroup.ButtonGroup(ButtonGroup.VERTICAL_LAYOUT, parent=self)
@@ -86,6 +97,20 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tools")
 
         self.btnGrp.toggled.connect(self.changeMode)
+
+    def setTheme(self, theme: dict):
+
+        self.scene_theme = theme["grid"]
+        self.class_node_theme = theme["class node"]
+
+        self.setStyleSheet(_style.format(grid_color=self.scene_theme['grid_fg'],
+                                         grid_bg_color=self.scene_theme['grid_bg'],
+                                         pen_width=self.scene_theme['grid_pen_width']
+                                         ))
+
+        for item in self.scene().items():
+            if isinstance(item, ClassNode):
+                item.setTheme(self.class_node_theme)
 
     def bgColor(self):
         return self._background_color
@@ -122,7 +147,7 @@ class ViewPort(QtWidgets.QGraphicsView):
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
 
-    def changeMode(self, btn: QtWidgets.QPushButton=None, mode: int=None):
+    def changeMode(self, btn: QtWidgets.QPushButton = None, mode: int = None):
         # changes mode (Available modes: Connect mode, selectMode, cut mode)
 
         if mode is None:
@@ -177,7 +202,7 @@ class ViewPort(QtWidgets.QGraphicsView):
     def addClass(self, pos: QtCore.QPoint):  # adds new class
         node = ClassNode()
         node.setPos(self.mapToScene(pos))
-
+        node.setTheme(self.class_node_theme)
         self._scene.addItem(node)
 
     def moveToGroup(self, grp):  # moves selected items to group
@@ -186,7 +211,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         for item in selectedItems:
             if isinstance(item, ClassNode) and not item.parentItem():
                 grp.addToGroup(item)
-
 
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)

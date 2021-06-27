@@ -1,11 +1,14 @@
+import os
 import sys
 import json
 import concurrent.futures
 from collections import OrderedDict
+from PreferenceWindow import Preference
 
 from PyQt5 import QtWidgets
 
 from DesignerItems.ClassNode import ClassNode
+from Resources import ResourcePaths
 from ViewPort import View
 
 
@@ -22,6 +25,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.view)
         self.new_file()
         self.statusBar().setVisible(True)
+
+        self.loadViewTheme()
 
     def initMenus(self):
         self.menu_bar = QtWidgets.QMenuBar(self)
@@ -53,6 +58,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.edit_menu = QtWidgets.QMenu("Edit")
         self.preference = QtWidgets.QAction("Preference")
+        self.preference.triggered.connect(self.preference_window)
 
         self.edit_menu.addActions([self.preference])
 
@@ -190,6 +196,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.current_save_file_path = save_path
             self.save_file()
 
+    def loadViewTheme(self):
+        with open(os.path.join(ResourcePaths.THEME_PATH_JSON, "theme.json"), 'r') as read:
+            theme = json.load(read)
+
+        self.view.setTheme(theme)
+
+    def preference_window(self):
+        win = Preference(self)
+        win.themeApplied.connect(lambda theme: self.view.setTheme(theme))
+        win.exec()
 
 
 def main():

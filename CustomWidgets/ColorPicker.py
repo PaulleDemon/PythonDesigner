@@ -1,3 +1,5 @@
+import math
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -176,17 +178,17 @@ class ColorCircle(QWidget):
             s = 1.0
         return h, s, v
 
-    def processMouseEvent(self, ev: QMouseEvent) -> None:
-        self.h, self.s, self.v = self.map_color(ev.x(), ev.y())
-        self.x = ev.x() / self.width()
-        self.y = ev.y() / self.height()
+    def processMouseEvent(self, ev_x, ev_y) -> None:
+        self.h, self.s, self.v = self.map_color(ev_x, ev_y)
+        self.x = ev_x / self.width()
+        self.y = ev_y / self.height()
         self.recalc()
 
     def mouseMoveEvent(self, ev: QMouseEvent) -> None:
-        self.processMouseEvent(ev)
+        self.processMouseEvent(ev.x(), ev.y())
 
     def mousePressEvent(self, ev: QMouseEvent) -> None:
-        self.processMouseEvent(ev)
+        self.processMouseEvent(ev.x(), ev.y())
 
     def setHue(self, hue: float) -> None:
         if 0 <= hue <= 1:
@@ -247,10 +249,16 @@ class ColorCircleDialog(QDialog):
         mainlay.addLayout(lay)
         fader = QSlider(Qt.Horizontal)
         fader.setMinimum(0)
-        fader.setMaximum(511)
+        fader.setMaximum(255)
 
-        fader.setValue(511)
-        fader.valueChanged.connect(lambda x: self.color_circle.setValue(x / 511))
+        # QColor(*startupcolor).value()
+        print(QColor(*startupcolor).value())
+        print("Color: ", startupcolor)
+
+        fader.setValue(QColor(*startupcolor).value())
+        # fader.valueChanged.connect(lambda x: self.color_circle.setValue(x / 511))
+        fader.valueChanged.connect(lambda x: self.color_circle.setValue(x/255))
+        self.color_circle.setColor(QColor(*startupcolor))
 
         hex_validator = QRegExpValidator(QRegExp("^#(?:[0-9a-fA-F]{3}){1,2}$"))
 

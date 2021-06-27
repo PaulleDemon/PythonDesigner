@@ -1,3 +1,5 @@
+THEME_PATH_JSON = r"Resources/"
+
 PATH_CUTTER = r"Resources/Icons/NodeEditorIcons/PathCutter.png"
 PATH_TOOL = r"Resources/Icons/NodeEditorIcons/PathTool.png"
 SELECT_TOOL = r"Resources/Icons/NodeEditorIcons/SelectTool.png"

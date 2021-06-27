@@ -5,10 +5,24 @@ from CustomWidgets.EditableLabel import EditableLabel, ClassType
 
 
 class Container(QtWidgets.QWidget):
-
     _style = """
-            QFrame#TitleFrame{background-color: red;}
-            QFrame#Seperator{background-color: black;}
+            QFrame#TitleFrame{{
+                color: {fg_color};
+                background-color: {bg_color};
+            }}
+            QFrame#Seperator{{
+                background-color: black;
+            }}
+            
+            QFrame#BodyFrame{{
+                background-color: {body_bg_color};
+            }}
+            
+            QFrame#TitleFrame QLabel, QFrame#TitleFrame#EditableLabel QLabel, QFrame#TitleFrame#EditableLabel>QLabel{{
+                color: {fg_color};
+                background-color: transparent;
+            }}
+            
             """
 
     resized = QtCore.pyqtSignal()
@@ -31,7 +45,7 @@ class Container(QtWidgets.QWidget):
         self.title_layout.setContentsMargins(2, 2, 2, 2)
         self.body_layout.setContentsMargins(2, 2, 2, 2)
 
-        self.class_title = EditableLabel(defaultText="Class Name")
+        self.class_title = EditableLabel(defaultText="Class Name", objectName="EditableLabel")
         self.class_title.setMaximumSize(self.width(), 50)
         self.class_title.enableToolTip("Class Name")
         self.class_title.setValidator()
@@ -39,8 +53,8 @@ class Container(QtWidgets.QWidget):
         self.title = QtWidgets.QLabel(title)
         self.title_layout.addRow(self.title, self.class_title)
 
-        variable_frame = QtWidgets.QFrame()
-        method_frame = QtWidgets.QFrame()
+        variable_frame = QtWidgets.QFrame(objectName="body")
+        method_frame = QtWidgets.QFrame(objectName="body")
 
         self.variable_layout = QtWidgets.QFormLayout(variable_frame)
         self.method_layout = QtWidgets.QFormLayout(method_frame)
@@ -73,7 +87,9 @@ class Container(QtWidgets.QWidget):
         self.title_frame.setFixedHeight(height)
 
     def addVariableName(self):
-        var = ClassType(parent=self, placeHolder="Variable Name", defaultText="Variable Name")
+        var = ClassType(parent=self, placeHolder="Variable Name",
+                        defaultText="Variable Name", objectName="EditableLabel")
+        var.setStyleSheet(self.styleSheet())
         self.insertToVarLayout(var)
         # self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
@@ -84,7 +100,10 @@ class Container(QtWidgets.QWidget):
         self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
     def addMethodName(self):
-        var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+        var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name",
+                        mem_type=1, objectName="EditableLabel")
+        var.setStyleSheet(self.styleSheet())
+        print(var.styleSheet())
         self.insertIntoMethodLayout(var)
 
     def insertIntoMethodLayout(self, var):
@@ -150,9 +169,17 @@ class Container(QtWidgets.QWidget):
             meth.deserialize(method)
             self.insertIntoMethodLayout(meth)
 
+    def setTheme(self, theme: dict):
+        print(theme)
+        self.setStyleSheet(self._style.format(fg_color=theme['header_fg'],
+                                              bg_color=theme['header_bg'],
+                                              body_bg_color=theme['body_bg'],
+                                              body_fg_color=theme['body_fg']
+                                              ))
+        # print("Style: ", self.styleSheet())
+
 
 class ClassNode(QtWidgets.QGraphicsObject):
-
     removed = QtCore.pyqtSignal()
 
     def __init__(self, *args, **kwargs):
@@ -225,8 +252,14 @@ class ClassNode(QtWidgets.QGraphicsObject):
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
+    def setTheme(self, theme: dict):
+        print(theme)
+        self.container.setTheme(theme)
+        self._selection_color = QtGui.QColor(theme['selection_color'])
+        # self.
+
     def getDestination(self):
-         for item in self._path:
+        for item in self._path:
             yield item.getDestinationNode()
 
     def isSource(self):
@@ -296,7 +329,8 @@ class ClassNode(QtWidgets.QGraphicsObject):
 
     def geometry(self):
         pos = self.scenePos()
-        scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(), pos.y() + self.sceneBoundingRect().height())
+        scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(),
+                                   pos.y() + self.sceneBoundingRect().height())
         x2, y2 = scenepos.x(), scenepos.y()
 
         return QtCore.QRectF(pos, QtCore.QPointF(x2, y2))
@@ -319,7 +353,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
         pos = self.scenePos()
         ordDict['id'] = self.id
         ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
-        ordDict['container']= self.container.serialize()
+        ordDict['container'] = self.container.serialize()
 
         return ordDict
 
