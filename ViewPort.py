@@ -128,22 +128,19 @@ class ViewPort(QtWidgets.QGraphicsView):
         if mode is None:
             mode = {self.select_btn: SELECTION_MODE, self.path_btn: CONNECT_MODE, self.cut_path_btn: CUT_MODE}[btn]
 
-        self.current_mode = mode  # todo: the cursor doesn't change
+        self.current_mode = mode
 
         if self.current_mode == CONNECT_MODE:
             cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_TOOL_CURSOR).scaled(30, 30))
-            # self.viewport().setCursor(cursor)
             QtWidgets.QApplication.setOverrideCursor(cursor)
             self.setCursor(cursor)
 
         elif self.current_mode == CUT_MODE:
             cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_CUTTER_CURSOR).scaled(30, 30))
-            # self.viewport().setCursor(cursor)
             QtWidgets.QApplication.setOverrideCursor(cursor)
             self.setCursor(cursor)
 
         else:
-            # self.viewport().setCursor(QtCore.Qt.ArrowCursor)
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
             self.setCursor(QtCore.Qt.ArrowCursor)
 
@@ -188,9 +185,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         selectedItems = self._scene.selectedItems()
         for item in selectedItems:
             if isinstance(item, ClassNode) and not item.parentItem():
-                # item.setParentItem(grp)
-                # item.setPos(item.mapToParent(item.pos()))
                 grp.addToGroup(item)
+
 
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)
@@ -244,7 +240,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             for grp in self.groups:
                 action = QtWidgets.QAction(grp.groupName(), self)
-                action.triggered.connect(lambda: self.moveToGroup(grp))
+                action.triggered.connect(lambda checked, group=grp: self.moveToGroup(group))
                 add_to_grp.addAction(action)
 
             if not self.groups or not items:
@@ -254,7 +250,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         menu.addMenu(add_to_grp)
         menu.addAction(remove_from_group)
 
-        menu.exec(self.mapToParent(event.pos()))
+        # menu.exec(self.mapToParent(event.pos()))
+        menu.exec(self.mapToGlobal(event.pos()))
 
 
 class View(ViewPort):
@@ -466,14 +463,19 @@ class View(ViewPort):
         elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
             self.btnGrp.focusNext()
 
-        elif event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.serialize()
-
-        elif event.key() == QtCore.Qt.Key_O and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.deSerialize()
+        # elif event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
+        #     self.serialize()
+        #
+        # elif event.key() == QtCore.Qt.Key_O and event.modifiers() == QtCore.Qt.ControlModifier:
+        #     self.deSerialize()
 
         else:
             super(ViewPort, self).keyPressEvent(event)
+
+    def clear_scene(self):
+        self._selected_items = set()
+        self._scene = QtWidgets.QGraphicsScene()
+        self.setScene(self._scene)
 
     def serialize(self):
         print("Serializing...")
@@ -494,30 +496,32 @@ class View(ViewPort):
                             "Paths": paths,
                             "GroupNodes": groupNode})
 
-        def save():
-            with open("datafile.json", "w") as write:
-                json.dump(data, write, indent=2)
+        return data
+        # def save():
+        #     with open("datafile.json", "w") as write:
+        #         json.dump(data, write, indent=2)
+        #
+        #     print("Serialize complete.")
+        #
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     _ = executor.submit(save)
 
-            print("Serialize complete.")
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            _ = executor.submit(save)
-
-    def deSerialize(self):  # todo: deserializing groups position doesn't work correctly
+    def deSerialize(self, data):  # todo: deserializing groups position doesn't work correctly
 
         self._scene = QtWidgets.QGraphicsScene()
         self._selected_items = set()
         self.setScene(self._scene)
+        # self.scene().clear()
 
-        def load():
-            with open("datafile.json", "r") as read:
-                data = OrderedDict(json.load(read))
-
-            return data
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(load)
-            data = future.result()
+        # def load():
+        #     with open("datafile.json", "r") as read:
+        #         data = OrderedDict(json.load(read))
+        #
+        #     return data
+        #
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     future = executor.submit(load)
+        #     data = future.result()
 
         print("Data: ", data)
 
