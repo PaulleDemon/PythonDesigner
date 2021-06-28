@@ -53,6 +53,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._line_cutter_path_item = None
 
         self._penWidth = 1.2
+        self.path_type = BEZIER_PATH
 
         self._cutter_pen = QtGui.QPen()
         self._cutter_pen.setColor(QtGui.QColor("#000000"))
@@ -76,6 +77,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.initUI()
 
         self.class_node_theme = {}
+        self.path_theme = {}
 
     def initUI(self):  # initializes tools on the left side (select tool, path tool, cutter tool)
 
@@ -102,6 +104,16 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.scene_theme = theme["grid"]
         self.class_node_theme = theme["class node"]
+        self.path_theme = theme["path"]
+
+        if self.path_theme["path type"] == "Direct":
+            self.path_type = DIRECT_PATH
+
+        elif self.path_theme["path type"] == "Bezier":
+            self.path_type = BEZIER_PATH
+
+        else:
+            self.path_type = SQUARE_PATH
 
         self.setStyleSheet(_style.format(grid_color=self.scene_theme['grid_fg'],
                                          grid_bg_color=self.scene_theme['grid_bg'],
@@ -109,8 +121,12 @@ class ViewPort(QtWidgets.QGraphicsView):
                                          ))
 
         for item in self.scene().items():
+            print("Items: ", item)
             if isinstance(item, ClassNode):
                 item.setTheme(self.class_node_theme)
+
+            elif isinstance(item, Path):
+                item.setTheme(self.path_theme)
 
     def bgColor(self):
         return self._background_color
@@ -132,6 +148,9 @@ class ViewPort(QtWidgets.QGraphicsView):
     def setPenWidth(self, width: float):
         self._penWidth = width
         self.setBackground()
+
+    def setPathType(self, type=BEZIER_PATH):
+        self.path_type = type
 
     def setBackground(self):
         qp = QtGui.QPainter(self.texture)
@@ -311,7 +330,8 @@ class View(ViewPort):
             item = self._scene.itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
                 self._isdrawingPath = True
-                self._current_path = Path(source=pos, destination=pos)
+                self._current_path = Path(source=pos, destination=pos, path_type=self.path_type)
+                self._current_path.setTheme(self.path_theme)
                 self._scene.addItem(self._current_path)
                 self._item1 = item
                 return

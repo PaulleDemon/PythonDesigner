@@ -35,7 +35,11 @@ class Preference(QtWidgets.QDialog):
         self.defalut_path = QtWidgets.QComboBox()
         self.defalut_path.addItems(["Direct", "Bezier", "Square"])
 
+        self.path_width = QtWidgets.QLineEdit()
+        self.path_width.setValidator(pen_width_validator)
         self.path_color = QtWidgets.QPushButton(clicked=self.colorDialog)
+        self.path_selection_color = QtWidgets.QPushButton(clicked=self.colorDialog)
+
         self.node_header_fg_color = QtWidgets.QPushButton(clicked=self.colorDialog)
         self.node_header_color = QtWidgets.QPushButton(clicked=self.colorDialog)
         self.node_body_fg_color = QtWidgets.QPushButton(clicked=self.colorDialog)
@@ -59,6 +63,8 @@ class Preference(QtWidgets.QDialog):
         formLayout.addRow(QtWidgets.QLabel("Path: "))
         formLayout.addRow("Default Path: ", self.defalut_path)
         formLayout.addRow("Path color: ", self.path_color)
+        formLayout.addRow("Path selection color: ", self.path_selection_color)
+        formLayout.addRow("Path width: ", self.path_width)
 
         formLayout.addWidget(QtWidgets.QLabel(" "))
 
@@ -116,6 +122,13 @@ class Preference(QtWidgets.QDialog):
                 "body_fg": self.node_body_fg_color.palette().button().color().name(),
                 "body_bg": self.node_body_color.palette().button().color().name(),
                 "selection_color": self.node_selection_color.palette().button().color().name()
+            },
+
+            "path": {
+                "path type": self.defalut_path.currentText(),
+                "path color": self.path_color.palette().button().color().name(),
+                "selection color": self.path_selection_color.palette().button().color().name(),
+                "path width": float(self.path_width.text()) if self.path_width.text() else 1
             }
         }
 
@@ -141,16 +154,24 @@ class Preference(QtWidgets.QDialog):
         # print(self.theme)
         grid_theme = self.theme['grid']
         class_node_theme = self.theme['class node']
+        path_theme = self.theme['path']
 
         self.pen_width.setText(f"{grid_theme['grid_pen_width']}")
         self.changeBtnColor(hex=grid_theme['grid_bg'], widget=self.grid_background_color)
         self.changeBtnColor(hex=grid_theme['grid_fg'], widget=self.pen_color)
+
+        self.changeBtnColor(hex=path_theme['path color'], widget=self.path_color)
+        self.changeBtnColor(hex=path_theme['selection color'], widget=self.path_selection_color)
+        self.path_width.setText(f"{path_theme['path width']}")
+        self.defalut_path.setCurrentText(path_theme['path type'])
+
 
         self.changeBtnColor(hex=class_node_theme['header_fg'], widget=self.node_header_fg_color)
         self.changeBtnColor(hex=class_node_theme['header_bg'], widget=self.node_header_color)
         self.changeBtnColor(hex=class_node_theme['body_fg'], widget=self.node_body_fg_color)
         self.changeBtnColor(hex=class_node_theme['body_bg'], widget=self.node_body_color)
         self.changeBtnColor(hex=class_node_theme['selection_color'], widget=self.node_selection_color)
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

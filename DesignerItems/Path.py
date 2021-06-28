@@ -86,6 +86,13 @@ class Path(QtWidgets.QGraphicsPathItem):
 
     PathWidth = pyqtProperty(float, penWidth, setPenWidth)
 
+    def setTheme(self, theme: dict):
+        print("Theme: ", theme)
+        self.setPenWidth(theme['path width'])
+        self.setSelectionColor(QtGui.QColor(theme['selection color']))
+        self.setHoverColor(QtGui.QColor(theme['selection color']))
+        self.setPathColor(QtGui.QColor(theme['path color']))
+
     def getSourcePoints(self):
         return self._sourcePoint
 

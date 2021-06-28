@@ -155,6 +155,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if data:
                 try:
                     self.view.deSerialize(data)
+                    self.loadViewTheme()
 
                 except KeyError:
                     self.new_file()
