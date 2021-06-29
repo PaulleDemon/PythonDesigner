@@ -9,8 +9,10 @@ from PyQt5 import QtWidgets
 
 from DesignerItems.ClassNode import ClassNode
 from Resources import ResourcePaths
-from ViewPort import View
+from ViewPort import View, Scene
 
+
+# todo: undo redo stack, when closing a new file don't ask for saving
 
 class MainWindow(QtWidgets.QMainWindow):
     current_save_file_path = ""
@@ -20,9 +22,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.initMenus()
 
         self.view = View()
-        self.view.setScene(QtWidgets.QGraphicsScene())
-        # view.setStyleSheet("#View{qproperty-GridColor: #615e5e; qproperty-BgColor: #c4c4c4; qproperty-PenWidth: 1.2;}")
+        # self.view.setScene(QtWidgets.QGraphicsScene())
+        self.view.setScene(Scene())
         self.setCentralWidget(self.view)
+
+        self.default_file = {}  # this is used to check if the user has made changes to default file
         self.new_file()
         self.statusBar().setVisible(True)
 
@@ -76,8 +80,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def new_file(self):
         self.view.clear_scene()
+        self.current_save_file_path = ""
         cls = ClassNode()
+        # cls.setTheme()
         self.view.scene().addItem(cls)
+        self.default_file = self.view.serialize()
+
+        # self.loadViewTheme()
 
     def closeEvent(self, event) -> None:
         new_data = self.view.serialize()
@@ -100,7 +109,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 show_dialog = True
 
         else:
-            show_dialog = True
+            if new_data != self.default_file:
+                show_dialog = True
 
         if show_dialog:
             close_dialog = QtWidgets.QMessageBox(parent=self)
@@ -184,7 +194,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.saveAs_file()
             if self.current_save_file_path:
                 return True
-
 
         return False
 

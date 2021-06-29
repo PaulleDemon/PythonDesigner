@@ -7,6 +7,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 class EditableLabel(QtWidgets.QWidget):
     deleted = QtCore.pyqtSignal()
     textChanged = QtCore.pyqtSignal()
+    textEdited = QtCore.pyqtSignal()
 
     def __init__(self, text="", placeHolder="class name", defaultText:str="", *args, **kwargs):
         super(EditableLabel, self).__init__(*args, **kwargs)
@@ -28,6 +29,7 @@ class EditableLabel(QtWidgets.QWidget):
         self._edit_label.textChanged.connect(self._textChanged)
         self._edit_label.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
         self._edit_label.editingFinished.connect(self.showLabel)
+        self._edit_label.editingFinished.connect(self.textEdited.emit)
         self._edit_label.setText(self._text) if self._text else self._edit_label.setText(self.defaultText)
         self._edit_label.setPlaceholderText(placeHolder)
 
@@ -93,6 +95,8 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
     _types = {"I": "Instance", "C": "Class", "S": "Static"}
     _member_types = {0: "Variable", 1: "Method"}
 
+    memberChanged = QtCore.pyqtSignal() # emits when there is a change in the content
+
     def __init__(self, mem_type=0, text="", placeHolder="class name", *args, **kwargs):
         super(ClassType, self).__init__(text, placeHolder, *args, **kwargs)
 
@@ -153,24 +157,31 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         menu = QtWidgets.QMenu(self)
 
         delete_widget = QtWidgets.QAction("Delete", self)
+        delete_widget.triggered.connect(self.memberChanged.emit)
         delete_widget.triggered.connect(self.deleteWidget)
 
         make_instance = QtWidgets.QAction(f"-> Instance {self.member_type}", self)
+        make_instance.triggered.connect(self.memberChanged.emit)
         make_instance.triggered.connect(lambda: self.setType("I"))
 
         make_class = QtWidgets.QAction(f"-> Class {self.member_type}", self)
+        make_class.triggered.connect(self.memberChanged.emit)
         make_class.triggered.connect(lambda: self.setType("C"))
 
         make_static = QtWidgets.QAction(f"-> static {self.member_type}", self)
+        make_static.triggered.connect(self.memberChanged.emit)
         make_static.triggered.connect(lambda: self.setType("S"))
 
         add_comment = QtWidgets.QAction("Add Comment", self)
+        add_comment.triggered.connect(self.memberChanged.emit)
         add_comment.triggered.connect(self.addComment)
 
         remove_comment = QtWidgets.QAction("Remove Comment", self)
+        remove_comment.triggered.connect(self.memberChanged.emit)
         remove_comment.triggered.connect(self.removeComment)
 
         edit_comment = QtWidgets.QAction("Edit Comment", self)
+        edit_comment.triggered.connect(self.memberChanged.emit)
         edit_comment.triggered.connect(self.editComment)
 
         if not self.comment:

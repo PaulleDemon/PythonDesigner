@@ -45,6 +45,7 @@ class Preference(QtWidgets.QDialog):
         self.node_body_fg_color = QtWidgets.QPushButton(clicked=self.colorDialog)
         self.node_body_color = QtWidgets.QPushButton(clicked=self.colorDialog)
         self.node_selection_color = QtWidgets.QPushButton(clicked=self.colorDialog)
+        self.node_border_color = QtWidgets.QPushButton(clicked=self.colorDialog)
 
         self.theme_options = QtWidgets.QComboBox()
         self.theme_options.addItems(["Dark", "Light"])
@@ -74,6 +75,7 @@ class Preference(QtWidgets.QDialog):
         formLayout.addRow("Node body foreground: ", self.node_body_fg_color)
         formLayout.addRow("Node body background: ", self.node_body_color)
         formLayout.addRow("Node selection color: ", self.node_selection_color)
+        formLayout.addRow("Node border color: ", self.node_border_color)
 
         formLayout.addWidget(QtWidgets.QLabel(" "))
 
@@ -121,7 +123,8 @@ class Preference(QtWidgets.QDialog):
                 "header_bg": self.node_header_color.palette().button().color().name(),
                 "body_fg": self.node_body_fg_color.palette().button().color().name(),
                 "body_bg": self.node_body_color.palette().button().color().name(),
-                "selection_color": self.node_selection_color.palette().button().color().name()
+                "selection_color": self.node_selection_color.palette().button().color().name(),
+                "border_color": self.node_border_color.palette().button().color().name()
             },
 
             "path": {
@@ -164,7 +167,6 @@ class Preference(QtWidgets.QDialog):
         self.changeBtnColor(hex=path_theme['selection color'], widget=self.path_selection_color)
         self.path_width.setText(f"{path_theme['path width']}")
         self.defalut_path.setCurrentText(path_theme['path type'])
-
 
         self.changeBtnColor(hex=class_node_theme['header_fg'], widget=self.node_header_fg_color)
         self.changeBtnColor(hex=class_node_theme['header_bg'], widget=self.node_header_color)

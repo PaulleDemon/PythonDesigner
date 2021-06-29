@@ -1,5 +1,4 @@
-import json
-import concurrent.futures
+import UndoRedoStack
 
 from Resources import ResourcePaths
 from CustomWidgets import ButtonGroup
@@ -76,6 +75,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setObjectName("View")
         self.initUI()
 
+        self.undo_redo = UndoRedoStack.UndoRedoStack()
+
         self.class_node_theme = {}
         self.path_theme = {}
 
@@ -121,7 +122,6 @@ class ViewPort(QtWidgets.QGraphicsView):
                                          ))
 
         for item in self.scene().items():
-            print("Items: ", item)
             if isinstance(item, ClassNode):
                 item.setTheme(self.class_node_theme)
 
@@ -231,13 +231,6 @@ class ViewPort(QtWidgets.QGraphicsView):
             if isinstance(item, ClassNode) and not item.parentItem():
                 grp.addToGroup(item)
 
-    def setScene(self, scene) -> None:
-        super(ViewPort, self).setScene(scene)
-        self._scene = scene
-        self.setBackground()
-        self._scene.selectionChanged.connect(self.selectionChanged)
-        self._scene.setItemIndexMethod(self._scene.NoIndex)
-
     def wheelEvent(self, event: QtGui.QWheelEvent):
 
         if self.transform().m11() >= 2 or self.transform().m11() < 0.5:
@@ -256,11 +249,24 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.scale(factor, factor)
 
+
+class View(ViewPort):
+
+    def setScene(self, scene) -> None:
+        super(ViewPort, self).setScene(scene)
+        self._scene = scene
+        self.setBackground()
+        self._scene.selectionChanged.connect(self.selectionChanged)
+        self._scene.setItemIndexMethod(self._scene.NoIndex)
+        # self._scene.changed.connect(self.registerUndoMove)
+        self._scene.sceneChanged.connect(self.registerUndoMove)
+
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
 
         menu = QtWidgets.QMenu(self)
 
         add_class = QtWidgets.QAction("Add Class")
+        add_class.triggered.connect(self.registerUndoMove)
         add_class.triggered.connect(lambda: self.addClass(event.pos()))
 
         items = self._scene.selectedItems()
@@ -296,9 +302,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         # menu.exec(self.mapToParent(event.pos()))
         menu.exec(self.mapToGlobal(event.pos()))
 
-
-class View(ViewPort):
-
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
         pos = self.mapToScene(event.pos())
@@ -312,6 +315,7 @@ class View(ViewPort):
                     item = item.parentItem()
 
                 item.setSelected(True)
+
             return
 
         if event.modifiers() == QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
@@ -354,6 +358,7 @@ class View(ViewPort):
                 event.accept()
 
             else:
+                self.registerUndoMove()
                 super().mousePressEvent(event)
 
         elif event.button() == QtCore.Qt.MidButton:  # panning
@@ -507,19 +512,40 @@ class View(ViewPort):
         elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
             self.btnGrp.focusNext()
 
-        # elif event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
-        #     self.serialize()
-        #
-        # elif event.key() == QtCore.Qt.Key_O and event.modifiers() == QtCore.Qt.ControlModifier:
-        #     self.deSerialize()
+        elif event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.undoMove()
+
+        elif event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.redoMove()
 
         else:
             super(ViewPort, self).keyPressEvent(event)
 
     def clear_scene(self):
         self._selected_items = set()
-        self._scene = QtWidgets.QGraphicsScene()
+        # self._scene = QtWidgets.QGraphicsScene()
+        self._scene = Scene()
         self.setScene(self._scene)
+
+    def registerUndoMove(self): # registers undo move
+        print("Registering....", self.sender())
+        self.undo_redo.add(self.serialize())
+
+    def undoMove(self):
+
+        data = self.undo_redo.undo_move()
+        if data:
+            self.deSerialize(data)
+
+        else:
+            print("no more undo")
+
+    def redoMove(self):
+        data = self.undo_redo.redo_move()
+        if data:
+            self.deSerialize(data)
+        else:
+            print("no more redo")
 
     def serialize(self):
         print("Serializing...")
@@ -541,37 +567,20 @@ class View(ViewPort):
                             "GroupNodes": groupNode})
 
         return data
-        # def save():
-        #     with open("datafile.json", "w") as write:
-        #         json.dump(data, write, indent=2)
-        #
-        #     print("Serialize complete.")
-        #
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     _ = executor.submit(save)
 
-    def deSerialize(self, data):  # todo: deserializing groups position doesn't work correctly
-
-        self._scene = QtWidgets.QGraphicsScene()
+    def deSerialize(self, data: dict):  # todo: deserializing groups position doesn't work correctly
+        # self._scene = QtWidgets.QGraphicsScene()
+        self._scene = Scene()
         self._selected_items = set()
         self.setScene(self._scene)
-        # self.scene().clear()
 
-        # def load():
-        #     with open("datafile.json", "r") as read:
-        #         data = OrderedDict(json.load(read))
-        #
-        #     return data
-        #
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     future = executor.submit(load)
-        #     data = future.result()
-
-        print("Data: ", data)
+        import pprint
+        pprint.pprint(data.items())
 
         for nodes in data['ClassNodes']:
             node = ClassNode()
             node.deserialize(nodes)
+            node.setTheme(self.class_node_theme)
             self._scene.addItem(node)
 
         for grpNodes in data['GroupNodes']:
@@ -592,7 +601,7 @@ class View(ViewPort):
 
         for paths in data['Paths']:
             path = Path()
-
+            path.setTheme(self.path_theme)
             for item in self._scene.items():
                 if isinstance(item, ClassNode):
                     if item.id == paths['source']:
@@ -611,3 +620,18 @@ class View(ViewPort):
     # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
     #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
     #     super(ViewPort, self).mouseDoubleClickEvent(event)
+
+
+class Scene(QtWidgets.QGraphicsScene):
+
+    sceneChanged = QtCore.pyqtSignal()
+
+    def addItem(self, item: QtWidgets.QGraphicsObject or QtWidgets.QGraphicsItem) -> None:
+        # self.sceneChanged.emit()
+        print("Emitting...")
+        if isinstance(item, QtWidgets.QGraphicsObject) or issubclass(item.__class__, QtWidgets.QGraphicsObject):
+            item.itemChanged.connect(self.sceneChanged.emit)
+            item.itemChanged.connect(lambda: print("Item changed"))
+            item.parentChanged.connect(self.sceneChanged.emit)
+
+        super(Scene, self).addItem(item)

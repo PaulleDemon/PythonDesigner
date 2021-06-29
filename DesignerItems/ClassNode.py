@@ -26,6 +26,7 @@ class Container(QtWidgets.QWidget):
             """
 
     resized = QtCore.pyqtSignal()
+    itemChanged = QtCore.pyqtSignal() # emits when there is a change in text or a button is pressed
 
     def __init__(self, title="Class", *args, **kwargs):
         super(Container, self).__init__(*args, **kwargs)
@@ -60,8 +61,11 @@ class Container(QtWidgets.QWidget):
         self.method_layout = QtWidgets.QFormLayout(method_frame)
 
         self.add_variable_btn = QtWidgets.QPushButton("Add Variable")
+        self.add_variable_btn.clicked.connect(self.itemChanged.emit)
         self.add_variable_btn.clicked.connect(self.addVariableName)
+
         self.add_method_btn = QtWidgets.QPushButton("Add Method")
+        self.add_method_btn.clicked.connect(self.itemChanged.emit)
         self.add_method_btn.clicked.connect(self.addMethodName)
 
         self.variable_layout.addWidget(self.add_variable_btn)
@@ -89,6 +93,8 @@ class Container(QtWidgets.QWidget):
     def addVariableName(self):
         var = ClassType(parent=self, placeHolder="Variable Name",
                         defaultText="Variable Name", objectName="EditableLabel")
+        var.textEdited.connect(self.itemChanged.emit)
+        var.memberChanged.connect(self.itemChanged.emit)
         var.setStyleSheet(self.styleSheet())
         self.insertToVarLayout(var)
         # self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
@@ -102,8 +108,9 @@ class Container(QtWidgets.QWidget):
     def addMethodName(self):
         var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name",
                         mem_type=1, objectName="EditableLabel")
+        var.textEdited.connect(self.itemChanged.emit)
+        var.memberChanged.connect(self.itemChanged.emit)
         var.setStyleSheet(self.styleSheet())
-        print(var.styleSheet())
         self.insertIntoMethodLayout(var)
 
     def insertIntoMethodLayout(self, var):
@@ -181,6 +188,7 @@ class Container(QtWidgets.QWidget):
 
 class ClassNode(QtWidgets.QGraphicsObject):
     removed = QtCore.pyqtSignal()
+    itemChanged = QtCore.pyqtSignal() # signal emitted when the item changes
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
@@ -221,6 +229,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.proxy.setContentsMargins(0, 0, 0, 0)
 
         self.container.setTitle(self._title)
+        self.container.itemChanged.connect(self.itemChanged.emit)
         self.container.resized.connect(self.geometryChanged)
 
         self.setTitleRect(100, 40)
@@ -256,6 +265,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
         print(theme)
         self.container.setTheme(theme)
         self._selection_color = QtGui.QColor(theme['selection_color'])
+        self._border_color = QtGui.QColor(theme['border_color'])
         # self.
 
     def getDestination(self):
@@ -288,6 +298,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
             path.updatePathPos()
 
     def itemChange(self, change, value):
+
         for path in self._path:
             path.updatePathPos()
 
@@ -295,7 +306,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
 
     def removeNode(self):
         self.removeConnectedPaths()
-
         self.scene().removeItem(self)
         self.removed.emit()
 
