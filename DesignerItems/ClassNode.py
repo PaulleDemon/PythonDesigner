@@ -18,7 +18,8 @@ class Container(QtWidgets.QWidget):
                 background-color: {body_bg_color};
             }}
             
-            QFrame#TitleFrame QLabel, QFrame#TitleFrame#EditableLabel QLabel, QFrame#TitleFrame#EditableLabel>QLabel{{
+            QFrame#TitleFrame QLabel, QFrame#TitleFrame#EditableLabel QLabel, 
+            QFrame#TitleFrame#EditableLabel>QLabel, QLabel{{
                 color: {fg_color};
                 background-color: transparent;
             }}
@@ -267,7 +268,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self._selection_color = QtGui.QColor(theme['selection_color'])
         self._border_color = QtGui.QColor(theme['border_color'])
         # self.
-
+    
     def getDestination(self):
         for item in self._path:
             yield item.getDestinationNode()
@@ -310,7 +311,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.removed.emit()
 
     def removeParent(self):
-        print(self.parentItem())
         self.setParentItem(None)
         self.removed.emit()
 

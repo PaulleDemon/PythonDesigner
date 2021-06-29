@@ -57,7 +57,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._cutter_pen = QtGui.QPen()
         self._cutter_pen.setColor(QtGui.QColor("#000000"))
         self._cutter_pen.setWidthF(2.0)
-        self._cutter_pen.setDashPattern([3, 3])
+        self._cutter_pen.setDashPattern([3, 5])
 
         self._background_color = QtGui.QColor("#ffffff")
         self._grid_color = QtGui.QColor("#b0b0b0")
@@ -115,6 +115,9 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         else:
             self.path_type = SQUARE_PATH
+
+        self._cutter_pen.setWidthF(self.path_theme["cutter width"])
+        self._cutter_pen.setColor(QtGui.QColor(self.path_theme["cut color"]))
 
         self.setStyleSheet(_style.format(grid_color=self.scene_theme['grid_fg'],
                                          grid_bg_color=self.scene_theme['grid_bg'],
@@ -319,9 +322,11 @@ class View(ViewPort):
             return
 
         if event.modifiers() == QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
+            self.registerUndoMove()
             # starts group rectangle
             self._groupRectangle = QtWidgets.QGraphicsRectItem()
             self._groupRectangle.setBrush(self._groupRectangleBgBrush)
+
             self._scene.addItem(self._groupRectangle)
             self._groupRectangle.setZValue(2)
             self._isdrawingGroupRect = True
@@ -333,6 +338,7 @@ class View(ViewPort):
             # draws paths
             item = self._scene.itemAt(pos, QtGui.QTransform())
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
+                self.registerUndoMove()
                 self._isdrawingPath = True
                 self._current_path = Path(source=pos, destination=pos, path_type=self.path_type)
                 self._current_path.setTheme(self.path_theme)
@@ -358,7 +364,9 @@ class View(ViewPort):
                 event.accept()
 
             else:
-                self.registerUndoMove()
+                if self.scene().selectedItems():
+                    self.registerUndoMove()
+
                 super().mousePressEvent(event)
 
         elif event.button() == QtCore.Qt.MidButton:  # panning
@@ -435,9 +443,11 @@ class View(ViewPort):
                 group.setZValue(group.defaultZValue)
                 self._scene.addItem(group)
                 self.groups.add(group)
+
                 if not group.childItems() or len(group.childItems()) < 2:
                     self._scene.removeItem(group)
                     self.groups.remove(group)
+                    self.undo_redo.pop_undo()  # remove the registered undo move if the rectangle operation fails
 
             self._scene.removeItem(self._groupRectangle)
 
@@ -482,6 +492,7 @@ class View(ViewPort):
 
             else:
                 self._scene.removeItem(self._current_path)
+                self.undo_redo.pop_undo()  # remove the registered undo move if the path operation fails
 
             self._item1 = None
             self._scene.update(self.sceneRect())
@@ -528,7 +539,6 @@ class View(ViewPort):
         self.setScene(self._scene)
 
     def registerUndoMove(self): # registers undo move
-        print("Registering....", self.sender())
         self.undo_redo.add(self.serialize())
 
     def undoMove(self):
@@ -631,7 +641,7 @@ class Scene(QtWidgets.QGraphicsScene):
         print("Emitting...")
         if isinstance(item, QtWidgets.QGraphicsObject) or issubclass(item.__class__, QtWidgets.QGraphicsObject):
             item.itemChanged.connect(self.sceneChanged.emit)
-            item.itemChanged.connect(lambda: print("Item changed"))
-            item.parentChanged.connect(self.sceneChanged.emit)
+            print("Emitted>>")
+            # item.parentChanged.connect(self.sceneChanged.emit)
 
         super(Scene, self).addItem(item)

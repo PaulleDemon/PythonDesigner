@@ -86,7 +86,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view.scene().addItem(cls)
         self.default_file = self.view.serialize()
 
-        # self.loadViewTheme()
+        self.loadViewTheme()
 
     def closeEvent(self, event) -> None:
         new_data = self.view.serialize()
@@ -165,7 +165,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if data:
                 try:
                     self.view.deSerialize(data)
-                    self.loadViewTheme()
+                    # self.loadViewTheme()
 
                 except KeyError:
                     self.new_file()

@@ -28,8 +28,8 @@ class EditableLabel(QtWidgets.QWidget):
         self._edit_label = QtWidgets.QLineEdit()
         self._edit_label.textChanged.connect(self._textChanged)
         self._edit_label.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        # self._edit_label.editingFinished.connect(self.textEdited.emit)
         self._edit_label.editingFinished.connect(self.showLabel)
-        self._edit_label.editingFinished.connect(self.textEdited.emit)
         self._edit_label.setText(self._text) if self._text else self._edit_label.setText(self.defaultText)
         self._edit_label.setPlaceholderText(placeHolder)
 
@@ -66,6 +66,7 @@ class EditableLabel(QtWidgets.QWidget):
             if self._edit_label.text() == self.defaultText:
                 self._edit_label.selectAll()
 
+            self.textEdited.emit()
             self._edit_label.setFocus()
             super(EditableLabel, self).mouseDoubleClickEvent(event)
 
