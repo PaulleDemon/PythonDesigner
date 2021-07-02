@@ -141,3 +141,4 @@ class GroupNode(QtWidgets.QGraphicsObject):
         self.setPos(QtCore.QPointF(data['pos']['x'], data['pos']['y']))
         self.setZValue(self.defaultZValue)
 
+            

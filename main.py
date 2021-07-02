@@ -13,7 +13,7 @@ from ViewPort import View, Scene
 
 
 # todo: fit in view and view menu.
-# todo: copy-paste
+# fixme: once saved into file its becomes impossible to draw path
 
 class MainWindow(QtWidgets.QMainWindow):
     current_save_file_path = ""

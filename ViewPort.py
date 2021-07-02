@@ -25,7 +25,6 @@ _style = """
 
 
 class ViewPort(QtWidgets.QGraphicsView):
-
     clipboard = None
 
     def __init__(self, *args, **kwargs):
@@ -253,11 +252,11 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.scale(factor, factor)
         # todo: transform reset
-        if self.transform().m11() < 0.5:
-            self.scale(1.25, 1.25)
-
-        if self.transform().m11() >= 2:
-            self.scale(0.8, 0.8)
+        # if self.transform().m11() < 0.5:
+        #     self.scale(1.25, 1.25)
+        #
+        # if self.transform().m11() >= 2:
+        #     self.scale(0.8, 0.8)
 
 
 class View(ViewPort):
@@ -296,13 +295,13 @@ class View(ViewPort):
 
         if itemAt or (len(items) == 1 and
                       not any(isinstance(x, ClassNode) or isinstance(x, GroupNode.GroupNode) for x in items)):
-
             super(ViewPort, self).contextMenuEvent(event)
             return
 
         if any(isinstance(item, ClassNode) for item in items):
 
             for grp in self.groups:
+                print("GROUPS: ", grp)
                 action = QtWidgets.QAction(grp.groupName(), self)
                 action.triggered.connect(lambda checked, group=grp: self.moveToGroup(group))
                 add_to_grp.addAction(action)
@@ -335,16 +334,24 @@ class View(ViewPort):
         classNodes = []
         paths = []
         groupNode = []
+
+        def serialize(_item):
+            if isinstance(_item, ClassNode):
+                classNodes.append(_item.serialize())
+
+            elif isinstance(_item, Path):
+                paths.append(_item.serialize())
+
+            elif isinstance(_item, GroupNode.GroupNode):
+                groupNode.append(_item.serialize())
+
         for item in self.scene().items():
             if item.isSelected() or (item.parentItem() and item.parentItem().isSelected()):
-                if isinstance(item, ClassNode):
-                    classNodes.append(item.serialize())
+                serialize(item)
 
-                elif isinstance(item, Path):
-                    paths.append(item.serialize())
-
-                elif isinstance(item, GroupNode.GroupNode):
-                    groupNode.append(item.serialize())
+            if isinstance(item, Path) and (item.getSourceNode() and item.getDestinationNode()) \
+                    and (item.getSourceNode().isSelected() and item.getDestinationNode().isSelected()):
+                serialize(item)
 
         data = {"ClassNodes": classNodes,
                 "Paths": paths,
@@ -365,7 +372,7 @@ class View(ViewPort):
             node.setTheme(self.class_node_theme)
             self._scene.addItem(node)
 
-            node.setPos(new_pos+node.pos())
+            node.setPos(new_pos + node.pos())
 
             newly_added_node.add(node)
 
@@ -380,14 +387,12 @@ class View(ViewPort):
                     if item.id in grpNodes['children']:
                         item.setParentItem(groupNode)
                         children.remove(item.id)
-                        print("ADDED...")
 
                 if not children:
                     break
 
             groupNode.deserialize(grpNodes)
             self._scene.addItem(groupNode)
-
             newly_added_group.add(groupNode)
 
         for paths in data['Paths']:
@@ -408,11 +413,12 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-            for item in newly_added_node:
-                item.id = id(item)
+        for item in newly_added_node:
+            item.id = id(item)
 
-            for item in newly_added_group:
-                item.id = id(item)
+        for item in newly_added_group:
+            item.id = id(item)
+            self.groups.add(item)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
@@ -446,8 +452,11 @@ class View(ViewPort):
                 event.modifiers() == QtCore.Qt.ControlModifier and event.button() == QtCore.Qt.LeftButton):
             # draws paths
             item = self._scene.itemAt(pos, QtGui.QTransform())
+
+            print("ITEMS: ", item)
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
                 self.registerUndoMove()
+                print("ENTERED...")
                 self._isdrawingPath = True
                 self._current_path = Path(source=pos, destination=pos, path_type=self.path_type)
                 self._current_path.setTheme(self.path_theme)
@@ -496,8 +505,10 @@ class View(ViewPort):
             return
 
         if self._isdrawingPath:
+            print("DRAWING....")
             self._current_path.setDestinationPoints(pos)
-            self._scene.update(self.sceneRect())
+            # self._scene.update(self.sceneRect())
+            self.scene().update(self.scene().itemsBoundingRect())
 
             return
 
@@ -639,13 +650,15 @@ class View(ViewPort):
             self.copyToClipboard()
 
         elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.pasteFromClipboard(self.mapFromGlobal(QtGui.QCursor.pos()))
+            # self.pasteFromClipboard(self.mapFromGlobal(QtGui.QCursor.pos()))
+            self.pasteFromClipboard(self.mapFromParent(QtGui.QCursor.pos()))
 
         else:
             super(ViewPort, self).keyPressEvent(event)
 
     def clear_scene(self):
         self._selected_items = set()
+        self.groups = set()
         self.undo_redo = UndoRedoStack.UndoRedoStack()
         self._scene = Scene()
         self.setScene(self._scene)
@@ -691,21 +704,30 @@ class View(ViewPort):
                 "Paths": paths,
                 "GroupNodes": groupNode}
 
+        import pprint
+        print("DATA SERIALIZED: ")
+        pprint.pprint(data)
+
         return data
 
     def deSerialize(self, data: dict):
 
+        self.clear_scene()
 
-        self._scene = Scene()
-        self._selected_items = set()
-        self.setScene(self._scene)
+        # self._scene = Scene()
+        # self._selected_items = set()
+        # self.groups = set()
+        # self.setScene(self._scene)
+
+        import pprint
+        print("DATA DESERIALZED: ")
+        pprint.pprint(data)
 
         for nodes in data['ClassNodes']:
             node = ClassNode()
             node.deserialize(nodes)
             node.setTheme(self.class_node_theme)
             self._scene.addItem(node)
-
 
         for grpNodes in data['GroupNodes']:
 
@@ -724,6 +746,8 @@ class View(ViewPort):
 
             groupNode.deserialize(grpNodes)
             self._scene.addItem(groupNode)
+            self.groups.add(groupNode)
+
 
         for paths in data['Paths']:
             path = Path()
@@ -754,7 +778,6 @@ class Scene(QtWidgets.QGraphicsScene):
     sceneChanged = QtCore.pyqtSignal()
 
     def addItem(self, item: QtWidgets.QGraphicsObject or QtWidgets.QGraphicsItem) -> None:
-
         if isinstance(item, QtWidgets.QGraphicsObject) or issubclass(item.__class__, QtWidgets.QGraphicsObject):
             item.itemChanged.connect(self.sceneChanged.emit)
 
