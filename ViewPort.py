@@ -26,6 +26,8 @@ _style = """
 
 class ViewPort(QtWidgets.QGraphicsView):
 
+    clipboard = None
+
     def __init__(self, *args, **kwargs):
         super(ViewPort, self).__init__(*args, **kwargs)
 
@@ -273,7 +275,7 @@ class View(ViewPort):
         self.scene().addItem(item)
 
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-
+        print("Menu..")
         menu = QtWidgets.QMenu(self)
 
         add_class = QtWidgets.QAction("Add Class")
@@ -292,7 +294,9 @@ class View(ViewPort):
         remove_from_group = QtWidgets.QAction("Remove from group")
         remove_from_group.triggered.connect(lambda: removeClassFromGroup(self.scene()))
 
-        if itemAt or (len(items) == 1 and not isinstance(items[0], ClassNode)):
+        if itemAt or (len(items) == 1 and
+                      not any(isinstance(x, ClassNode) or isinstance(x, GroupNode.GroupNode) for x in items)):
+
             super(ViewPort, self).contextMenuEvent(event)
             return
 
@@ -306,12 +310,109 @@ class View(ViewPort):
             if not self.groups or not items:
                 add_to_grp.setDisabled(True)
 
+        copyItems = QtWidgets.QAction("Copy")
+        copyItems.setShortcut("ctrl+C")
+        copyItems.triggered.connect(self.copyToClipboard)
+
+        if not self.scene().selectedItems():
+            copyItems.setDisabled(True)
+
+        paste = QtWidgets.QAction("Paste")
+        paste.setShortcut("Ctrl+V")
+        paste.triggered.connect(lambda: self.pasteFromClipboard(event.pos()))
+
+        if not self.clipboard:
+            paste.setDisabled(True)
+
         menu.addAction(add_class)
         menu.addMenu(add_to_grp)
-        menu.addAction(remove_from_group)
+        menu.addActions([remove_from_group, copyItems, paste])
 
-        # menu.exec(self.mapToParent(event.pos()))
         menu.exec(self.mapToGlobal(event.pos()))
+
+    def copyToClipboard(self):
+
+        classNodes = []
+        paths = []
+        groupNode = []
+        for item in self.scene().items():
+            if item.isSelected() or (item.parentItem() and item.parentItem().isSelected()):
+                if isinstance(item, ClassNode):
+                    classNodes.append(item.serialize())
+
+                elif isinstance(item, Path):
+                    paths.append(item.serialize())
+
+                elif isinstance(item, GroupNode.GroupNode):
+                    groupNode.append(item.serialize())
+
+        data = {"ClassNodes": classNodes,
+                "Paths": paths,
+                "GroupNodes": groupNode}
+
+        self.clipboard = data
+
+    def pasteFromClipboard(self, pos):
+        data = copy.deepcopy(self.clipboard)
+        new_pos = self.mapToScene(pos)
+
+        newly_added_node = set()
+        newly_added_group = set()
+
+        for nodes in data['ClassNodes']:
+            node = ClassNode()
+            node.deserialize(nodes)
+            node.setTheme(self.class_node_theme)
+            self._scene.addItem(node)
+
+            node.setPos(new_pos+node.pos())
+
+            newly_added_node.add(node)
+
+        for grpNodes in data['GroupNodes']:
+
+            groupNode = GroupNode.GroupNode()
+            children = grpNodes['children']
+
+            for item in newly_added_node:
+
+                if isinstance(item, ClassNode):
+                    if item.id in grpNodes['children']:
+                        item.setParentItem(groupNode)
+                        children.remove(item.id)
+                        print("ADDED...")
+
+                if not children:
+                    break
+
+            groupNode.deserialize(grpNodes)
+            self._scene.addItem(groupNode)
+
+            newly_added_group.add(groupNode)
+
+        for paths in data['Paths']:
+            path = Path()
+            path.setTheme(self.path_theme)
+            for item in newly_added_node:
+                if isinstance(item, ClassNode):
+                    if item.id == paths['source']:
+                        path.setSourceNode(item)
+                        item.addPath(path)
+
+                    if item.id == paths['destination']:
+                        path.setDestinationNode(item)
+                        item.addPath(path)
+
+                if path.getDestinationNode() and path.getSourceNode():
+                    path.deserialize(paths)
+                    self._scene.addItem(path)
+                    break
+
+            for item in newly_added_node:
+                item.id = id(item)
+
+            for item in newly_added_group:
+                item.id = id(item)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
@@ -534,18 +635,17 @@ class View(ViewPort):
         elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
             self.btnGrp.focusNextPrevChild(True)  # todo: this doesn't work
 
-        elif event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.undoMove()
+        elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.copyToClipboard()
 
-        elif event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.redoMove()
+        elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.pasteFromClipboard(self.mapFromGlobal(QtGui.QCursor.pos()))
 
         else:
             super(ViewPort, self).keyPressEvent(event)
 
     def clear_scene(self):
         self._selected_items = set()
-        # self._scene = QtWidgets.QGraphicsScene()
         self.undo_redo = UndoRedoStack.UndoRedoStack()
         self._scene = Scene()
         self.setScene(self._scene)
@@ -560,10 +660,8 @@ class View(ViewPort):
 
         data = self.undo_redo.undo_move()
         if data:
-            self.deSerialize(data)  # todo: remove this comment
-            import pprint
-            # print("Data: ", '\n', len(self.undo_redo))
-            # pprint.pprint(data)
+            self.deSerialize(data)
+
         else:
             print("no more undo")
 
@@ -593,14 +691,11 @@ class View(ViewPort):
                 "Paths": paths,
                 "GroupNodes": groupNode}
 
-        # import pprint
-        # print("serialized: ")
-        # pprint.pprint(data)
-
         return data
 
     def deSerialize(self, data: dict):
-        # self._scene = QtWidgets.QGraphicsScene()
+
+
         self._scene = Scene()
         self._selected_items = set()
         self.setScene(self._scene)
@@ -611,16 +706,18 @@ class View(ViewPort):
             node.setTheme(self.class_node_theme)
             self._scene.addItem(node)
 
+
         for grpNodes in data['GroupNodes']:
 
             groupNode = GroupNode.GroupNode()
             children = grpNodes['children']
 
             for item in self._scene.items():
+
                 if isinstance(item, ClassNode):
                     if item.id in grpNodes['children']:
                         item.setParentItem(groupNode)
-                        children.remove(item.id)  # todo:[solved] this line is the problem I guess because both redo and this is pointing to same address
+                        children.remove(item.id)
 
                 if not children:
                     break
@@ -657,9 +754,8 @@ class Scene(QtWidgets.QGraphicsScene):
     sceneChanged = QtCore.pyqtSignal()
 
     def addItem(self, item: QtWidgets.QGraphicsObject or QtWidgets.QGraphicsItem) -> None:
-        # print("Emitting...")
+
         if isinstance(item, QtWidgets.QGraphicsObject) or issubclass(item.__class__, QtWidgets.QGraphicsObject):
             item.itemChanged.connect(self.sceneChanged.emit)
-            # print("Emitted>>")
-            # item.parentChanged.connect(self.sceneChanged.emit)
+
         super(Scene, self).addItem(item)

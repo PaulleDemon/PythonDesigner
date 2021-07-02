@@ -362,8 +362,10 @@ class ClassNode(QtWidgets.QGraphicsObject):
         return ordDict
 
     def deserialize(self, data):
+        # if change_id is True then doesn't use the existing id instead uses deserialized id
 
         self.id = data['id']
+
         pos = QtCore.QPointF(data['pos']['x'], data['pos']['y'])
         self.setPos(pos)
         self.container.deserialize(data['container'])

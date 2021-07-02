@@ -82,6 +82,7 @@ class GroupNode(QtWidgets.QGraphicsObject):
         # self.scene().removeItem(self)
 
     def contextMenuEvent(self, event) -> None:
+
         menu = QtWidgets.QMenu()
 
         delete_group = QtWidgets.QAction("Delete Group")
@@ -94,7 +95,7 @@ class GroupNode(QtWidgets.QGraphicsObject):
 
         menu.addActions([delete_group, delete_groupMembers])
         menu.exec(event.screenPos())
-    
+
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.proxy.mouseDoubleClickEvent(event)
         super(GroupNode, self).mouseDoubleClickEvent(event)
@@ -133,7 +134,9 @@ class GroupNode(QtWidgets.QGraphicsObject):
         return ordDict
 
     def deserialize(self, data):
+
         self.id = data['id']
+
         self.setGroupName(data['groupName'])
         self.setPos(QtCore.QPointF(data['pos']['x'], data['pos']['y']))
         self.setZValue(self.defaultZValue)

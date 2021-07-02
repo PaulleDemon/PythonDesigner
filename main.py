@@ -12,7 +12,6 @@ from Resources import ResourcePaths
 from ViewPort import View, Scene
 
 
-# todo: undo redo stack, not working with group class
 # todo: fit in view and view menu.
 # todo: copy-paste
 
@@ -21,12 +20,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__()
-        self.initMenus()
 
         self.view = View()
         # self.view.setScene(QtWidgets.QGraphicsScene())
         self.view.setScene(Scene())
         self.setCentralWidget(self.view)
+
+        self.initMenus()
 
         self.default_file = {}  # this is used to check if the user has made changes to default file
         self.new_file()
@@ -63,13 +63,21 @@ class MainWindow(QtWidgets.QMainWindow):
                                    self.save_action, self.save_as_action, self.quit_action])
 
         self.edit_menu = QtWidgets.QMenu("Edit")
+
+        self.undo = QtWidgets.QAction("Undo")
+        self.undo.setShortcut('Ctrl+Z')
+        self.undo.triggered.connect(self.view.undoMove)
+
+        self.redo = QtWidgets.QAction("Redo")
+        self.redo.setShortcut('Ctrl+Y')
+        self.redo.triggered.connect(self.view.redoMove)
+
         self.preference = QtWidgets.QAction("Preference")
         self.preference.triggered.connect(self.preference_window)
 
-        self.edit_menu.addActions([self.preference])
+        self.edit_menu.addActions([self.undo, self.redo, self.preference])
 
         self.generate_menu = QtWidgets.QMenu("Generate")
-
         self.generate_action = QtWidgets.QAction("Generate file")
 
         self.generate_menu.addActions([self.generate_action])
@@ -150,7 +158,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
             def load():
                 data = ''
-                # with open("datafile.json", "r") as read:
                 with open(filepath, "r") as read:
                     try:
                         data = OrderedDict(json.load(read))
@@ -226,7 +233,6 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     wind = MainWindow()
     wind.show()
-
     sys.exit(app.exec())
 
 
