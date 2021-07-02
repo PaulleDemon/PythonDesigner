@@ -1,6 +1,5 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 
-from collections import OrderedDict
 
 from DesignerItems import ClassNode
 from CustomWidgets.EditableLabel import EditableLabel
@@ -126,11 +125,11 @@ class GroupNode(QtWidgets.QGraphicsObject):
         painter.drawRect(self.boundingRect())
 
     def serialize(self):
-        ordDict = OrderedDict()
-        ordDict['id'] = self.id
-        ordDict['groupName'] = self.groupName()
-        ordDict['pos'] = {'x': self.pos().x(), 'y': self.pos().y()}
-        ordDict['children'] = [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]
+        ordDict = {'id': self.id,
+                   'groupName': self.groupName(),
+                   'pos': {'x': self.pos().x(), 'y': self.pos().y()},
+                   'children': [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]}
+
         return ordDict
 
     def deserialize(self, data):

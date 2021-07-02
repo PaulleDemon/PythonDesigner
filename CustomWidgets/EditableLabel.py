@@ -1,6 +1,5 @@
 import textwrap
 
-from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 
@@ -199,12 +198,10 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         menu.popup(self.mapToGlobal(event.pos()))
 
     def serialize(self):
-        ordDict = OrderedDict()
-
-        ordDict['text'] = self.getText()
-        ordDict['type'] = self.type
-        ordDict['memberType'] = self.member_type
-        ordDict['comment'] = self.comment
+        ordDict = {'text': self.getText(),
+                   'type': self.type,
+                   'memberType': self.member_type,
+                   'comment': self.comment}
 
         return ordDict
 

@@ -12,7 +12,9 @@ from Resources import ResourcePaths
 from ViewPort import View, Scene
 
 
-# todo: undo redo stack, when closing a new file don't ask for saving
+# todo: undo redo stack, not working with group class
+# todo: fit in view and view menu.
+# todo: copy-paste
 
 class MainWindow(QtWidgets.QMainWindow):
     current_save_file_path = ""
@@ -83,7 +85,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_save_file_path = ""
         cls = ClassNode()
         # cls.setTheme()
-        self.view.scene().addItem(cls)
+        # self.view.scene().addItem(cls)
+        self.view.addItem(cls)
         self.default_file = self.view.serialize()
 
         self.loadViewTheme()
@@ -164,6 +167,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if data:
                 try:
+                    self.view.clear_scene()
                     self.view.deSerialize(data)
                     # self.loadViewTheme()
 

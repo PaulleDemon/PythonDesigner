@@ -1,3 +1,5 @@
+import copy
+
 import UndoRedoStack
 
 from Resources import ResourcePaths
@@ -236,9 +238,6 @@ class ViewPort(QtWidgets.QGraphicsView):
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
 
-        if self.transform().m11() >= 2 or self.transform().m11() < 0.5:
-            self.resetTransform()
-
         if event.angleDelta().y() > 0 and self._zoom < 3:
             factor = 1.25
             self._zoom += 1
@@ -251,6 +250,12 @@ class ViewPort(QtWidgets.QGraphicsView):
             return
 
         self.scale(factor, factor)
+        # todo: transform reset
+        if self.transform().m11() < 0.5:
+            self.scale(1.25, 1.25)
+
+        if self.transform().m11() >= 2:
+            self.scale(0.8, 0.8)
 
 
 class View(ViewPort):
@@ -263,6 +268,9 @@ class View(ViewPort):
         self._scene.setItemIndexMethod(self._scene.NoIndex)
         # self._scene.changed.connect(self.registerUndoMove)
         self._scene.sceneChanged.connect(self.registerUndoMove)
+
+    def addItem(self, item: QtWidgets.QGraphicsObject):
+        self.scene().addItem(item)
 
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
 
@@ -444,10 +452,13 @@ class View(ViewPort):
                 self._scene.addItem(group)
                 self.groups.add(group)
 
+                # self.registerRedoMove()
+
                 if not group.childItems() or len(group.childItems()) < 2:
                     self._scene.removeItem(group)
                     self.groups.remove(group)
                     self.undo_redo.pop_undo()  # remove the registered undo move if the rectangle operation fails
+                    # self.undo_redo.pop_redo()
 
             self._scene.removeItem(self._groupRectangle)
 
@@ -521,7 +532,7 @@ class View(ViewPort):
             self.toggleToolBar()
 
         elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.btnGrp.focusNext()
+            self.btnGrp.focusNextPrevChild(True)  # todo: this doesn't work
 
         elif event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
             self.undoMove()
@@ -535,18 +546,24 @@ class View(ViewPort):
     def clear_scene(self):
         self._selected_items = set()
         # self._scene = QtWidgets.QGraphicsScene()
+        self.undo_redo = UndoRedoStack.UndoRedoStack()
         self._scene = Scene()
         self.setScene(self._scene)
 
-    def registerUndoMove(self): # registers undo move
+    def registerUndoMove(self):  # registers undo move
         self.undo_redo.add(self.serialize())
+
+    def registerRedoMove(self):
+        self.undo_redo.add_redo(self.serialize())
 
     def undoMove(self):
 
         data = self.undo_redo.undo_move()
         if data:
-            self.deSerialize(data)
-
+            self.deSerialize(data)  # todo: remove this comment
+            import pprint
+            # print("Data: ", '\n', len(self.undo_redo))
+            # pprint.pprint(data)
         else:
             print("no more undo")
 
@@ -572,20 +589,21 @@ class View(ViewPort):
             elif isinstance(item, GroupNode.GroupNode):
                 groupNode.append(item.serialize())
 
-        data = OrderedDict({"ClassNodes": classNodes,
-                            "Paths": paths,
-                            "GroupNodes": groupNode})
+        data = {"ClassNodes": classNodes,
+                "Paths": paths,
+                "GroupNodes": groupNode}
+
+        # import pprint
+        # print("serialized: ")
+        # pprint.pprint(data)
 
         return data
 
-    def deSerialize(self, data: dict):  # todo: deserializing groups position doesn't work correctly
+    def deSerialize(self, data: dict):
         # self._scene = QtWidgets.QGraphicsScene()
         self._scene = Scene()
         self._selected_items = set()
         self.setScene(self._scene)
-
-        import pprint
-        pprint.pprint(data.items())
 
         for nodes in data['ClassNodes']:
             node = ClassNode()
@@ -597,11 +615,12 @@ class View(ViewPort):
 
             groupNode = GroupNode.GroupNode()
             children = grpNodes['children']
+
             for item in self._scene.items():
                 if isinstance(item, ClassNode):
                     if item.id in grpNodes['children']:
                         item.setParentItem(groupNode)
-                        children.remove(item.id)
+                        children.remove(item.id)  # todo:[solved] this line is the problem I guess because both redo and this is pointing to same address
 
                 if not children:
                     break
@@ -627,21 +646,20 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-    # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-    #     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
-    #     super(ViewPort, self).mouseDoubleClickEvent(event)
+    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+        self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
+                       , QtCore.Qt.KeepAspectRatio)
+        self.updateSceneRect(self.sceneRect())
+        super(ViewPort, self).mouseDoubleClickEvent(event)
 
 
 class Scene(QtWidgets.QGraphicsScene):
-
     sceneChanged = QtCore.pyqtSignal()
 
     def addItem(self, item: QtWidgets.QGraphicsObject or QtWidgets.QGraphicsItem) -> None:
-        # self.sceneChanged.emit()
-        print("Emitting...")
+        # print("Emitting...")
         if isinstance(item, QtWidgets.QGraphicsObject) or issubclass(item.__class__, QtWidgets.QGraphicsObject):
             item.itemChanged.connect(self.sceneChanged.emit)
-            print("Emitted>>")
+            # print("Emitted>>")
             # item.parentChanged.connect(self.sceneChanged.emit)
-
         super(Scene, self).addItem(item)

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 from CustomWidgets.EditableLabel import EditableLabel, ClassType
@@ -137,9 +136,7 @@ class Container(QtWidgets.QWidget):
         self.resized.emit()
 
     def serialize(self):
-        ordDict = OrderedDict()
-
-        ordDict['className'] = self.class_title.getText()
+        ordDict = {'className': self.class_title.getText()}
 
         varCount = self.variable_layout.count()
         varList = []
@@ -178,7 +175,6 @@ class Container(QtWidgets.QWidget):
             self.insertIntoMethodLayout(meth)
 
     def setTheme(self, theme: dict):
-        print(theme)
         self.setStyleSheet(self._style.format(fg_color=theme['header_fg'],
                                               bg_color=theme['header_bg'],
                                               body_bg_color=theme['body_bg'],
@@ -263,11 +259,9 @@ class ClassNode(QtWidgets.QGraphicsObject):
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
     def setTheme(self, theme: dict):
-        print(theme)
         self.container.setTheme(theme)
         self._selection_color = QtGui.QColor(theme['selection_color'])
         self._border_color = QtGui.QColor(theme['border_color'])
-        # self.
     
     def getDestination(self):
         for item in self._path:
@@ -359,10 +353,10 @@ class ClassNode(QtWidgets.QGraphicsObject):
         painter.restore()
 
     def serialize(self):
-        ordDict = OrderedDict()
+        ordDict = {}
         pos = self.scenePos()
         ordDict['id'] = self.id
-        ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
+        ordDict['pos'] = {"x": pos.x(), "y": pos.y()}
         ordDict['container'] = self.container.serialize()
 
         return ordDict
