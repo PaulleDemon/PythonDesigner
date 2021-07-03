@@ -200,8 +200,10 @@ class Path(QtWidgets.QGraphicsPathItem):
         double_headed.triggered.connect(lambda: self.setArrowHead(DOUBLE_HEADED))
 
         invert_head = QtWidgets.QAction("Invert Head")
-        invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED) if self._arrow_type == DESTINATION_HEADED
-                                                                             else self.setArrowHead(DESTINATION_HEADED))
+        # invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED)
+        # if self._arrow_type == DESTINATION_HEADED
+        # else self.setArrowHead(DESTINATION_HEADED))
+        invert_head.triggered.connect(self.invertArrowHead)
 
         def setZValue(parent, z: float) -> None:
             parent.setZValue(z)
@@ -234,6 +236,15 @@ class Path(QtWidgets.QGraphicsPathItem):
         menu.addAction(remove_path)
 
         menu.exec(event.screenPos())
+
+    def invertArrowHead(self):
+        if self._arrow_type == DESTINATION_HEADED:
+            self.setArrowHead(SOURCE_HEADED)
+
+        else:
+            self.setArrowHead(DESTINATION_HEADED)
+
+        self._sourceNode, self._destinationNode = self._destinationNode, self._sourceNode
 
     def arrowCalc(self, start_point=None, end_point=None):  # calculates the point where the arrow should be drawn
 
