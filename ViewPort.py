@@ -237,20 +237,41 @@ class ViewPort(QtWidgets.QGraphicsView):
             if isinstance(item, ClassNode) and not item.parentItem():
                 grp.addToGroup(item)
 
-    def wheelEvent(self, event: QtGui.QWheelEvent):
-
-        if event.angleDelta().y() > 0 and self._zoom < 3:
+    def zoomIn(self):
+        print("Zoom: ", self.transform().m11())
+        if self.transform().m11() <= 1.95:
             factor = 1.25
             self._zoom += 1
+            self.scale(factor, factor)
 
-        elif event.angleDelta().y() < 0 and self._zoom > -2:
+        else:
+            # self.resetTransform()
+            self.transform().m11 = 1.95
+
+    def zoomOut(self):
+
+        print("Zoom: ", self.transform().m11())
+        if self.transform().m11() >=0.8:
             factor = 0.8
             self._zoom -= 1
 
-        else:
-            return
+            self.scale(factor, factor)
 
-        self.scale(factor, factor)
+        elif self.transform().m11() >= 2:
+            self.resetTransform()
+
+    def fitView(self):
+        self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
+                       , QtCore.Qt.KeepAspectRatio)
+
+    def wheelEvent(self, event: QtGui.QWheelEvent):
+
+        if event.angleDelta().y() > 0:
+            self.zoomIn()
+
+        elif event.angleDelta().y() < 0:
+            self.zoomOut()
+
         # todo: transform reset
         # if self.transform().m11() < 0.5:
         #     self.scale(1.25, 1.25)
@@ -704,10 +725,6 @@ class View(ViewPort):
                 "Paths": paths,
                 "GroupNodes": groupNode}
 
-        import pprint
-        print("DATA SERIALIZED: ")
-        pprint.pprint(data)
-
         return data
 
     def deSerialize(self, data: dict):
@@ -718,10 +735,6 @@ class View(ViewPort):
         # self._selected_items = set()
         # self.groups = set()
         # self.setScene(self._scene)
-
-        import pprint
-        print("DATA DESERIALZED: ")
-        pprint.pprint(data)
 
         for nodes in data['ClassNodes']:
             node = ClassNode()
@@ -748,7 +761,6 @@ class View(ViewPort):
             self._scene.addItem(groupNode)
             self.groups.add(groupNode)
 
-
         for paths in data['Paths']:
             path = Path()
             path.setTheme(self.path_theme)
@@ -767,11 +779,11 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-        self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
-                       , QtCore.Qt.KeepAspectRatio)
-        self.updateSceneRect(self.sceneRect())
-        super(ViewPort, self).mouseDoubleClickEvent(event)
+    # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+    #     self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
+    #                    , QtCore.Qt.KeepAspectRatio)
+    #     self.updateSceneRect(self.sceneRect())
+    #     super(ViewPort, self).mouseDoubleClickEvent(event)
 
 
 class Scene(QtWidgets.QGraphicsScene):

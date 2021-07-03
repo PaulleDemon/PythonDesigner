@@ -77,14 +77,38 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.edit_menu.addActions([self.undo, self.redo, self.preference])
 
+        self.view_menu = QtWidgets.QMenu("View")
+
+        self.zoom_in = QtWidgets.QAction("Zoom in")
+        self.zoom_in.setShortcut("ctrl++")
+        self.zoom_in.triggered.connect(self.view.zoomIn)
+
+        self.zoom_out = QtWidgets.QAction("Zoom out")
+        self.zoom_out.setShortcut("ctrl+-")
+        self.zoom_out.triggered.connect(self.view.zoomOut)
+
+        self.fit_in_view = QtWidgets.QAction("Fit in view")
+        self.fit_in_view.triggered.connect(self.view.fitView)
+
+        self.view_menu.addActions([self.zoom_in, self.zoom_out, self.fit_in_view])
+
         self.generate_menu = QtWidgets.QMenu("Generate")
         self.generate_action = QtWidgets.QAction("Generate file")
 
         self.generate_menu.addActions([self.generate_action])
 
+        self.help_menu = QtWidgets.QMenu("Help")
+
+        self.docs = QtWidgets.QAction("Documentation")
+        self.docs.triggered.connect(lambda: 1)
+
+        self.help_menu.addAction(self.docs)
+
         self.menu_bar.addMenu(self.file_menu)
         self.menu_bar.addMenu(self.edit_menu)
+        self.menu_bar.addMenu(self.view_menu)
         self.menu_bar.addMenu(self.generate_menu)
+        self.menu_bar.addMenu(self.help_menu)
 
         self.setMenuBar(self.menu_bar)
 

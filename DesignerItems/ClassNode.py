@@ -92,7 +92,7 @@ class Container(QtWidgets.QWidget):
 
     def addVariableName(self):
         var = ClassType(parent=self, placeHolder="Variable Name",
-                        defaultText="Variable Name", objectName="EditableLabel")
+                        defaultText="Variable Name", objectName="EditableLabel", static=False)
         var.textEdited.connect(self.itemChanged.emit)
         var.memberChanged.connect(self.itemChanged.emit)
         var.setStyleSheet(self.styleSheet())

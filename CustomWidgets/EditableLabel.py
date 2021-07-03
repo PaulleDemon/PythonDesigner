@@ -97,12 +97,13 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
 
     memberChanged = QtCore.pyqtSignal() # emits when there is a change in the content
 
-    def __init__(self, mem_type=0, text="", placeHolder="class name", *args, **kwargs):
+    def __init__(self, mem_type=0, text="", placeHolder="class name", static=True, *args, **kwargs):
         super(ClassType, self).__init__(text, placeHolder, *args, **kwargs)
 
         self.member_type = self._member_types[mem_type]
         self.type = "I"
         self.comment = ""
+        self.static = static # enables static members
 
         self.type_lbl = QtWidgets.QLabel(self.type)
         self.hlayout.addWidget(self.type_lbl)
@@ -168,9 +169,10 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
         make_class.triggered.connect(self.memberChanged.emit)
         make_class.triggered.connect(lambda: self.setType("C"))
 
-        make_static = QtWidgets.QAction(f"-> static {self.member_type}", self)
-        make_static.triggered.connect(self.memberChanged.emit)
-        make_static.triggered.connect(lambda: self.setType("S"))
+        if self.static:
+            make_static = QtWidgets.QAction(f"-> static {self.member_type}", self)
+            make_static.triggered.connect(self.memberChanged.emit)
+            make_static.triggered.connect(lambda: self.setType("S"))
 
         add_comment = QtWidgets.QAction("Add Comment", self)
         add_comment.triggered.connect(self.memberChanged.emit)
@@ -190,7 +192,11 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
 
         menu.addAction(delete_widget)
         menu.addSeparator()
-        menu.addActions([make_instance, make_class, make_static])
+        menu.addActions([make_instance, make_class])
+
+        if self.static:
+            menu.addAction(make_static)
+
         menu.addSeparator()
 
         menu.addActions([add_comment, remove_comment, edit_comment])
