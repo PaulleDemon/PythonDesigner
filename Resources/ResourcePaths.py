@@ -5,7 +5,7 @@ PATH_CUTTER = r"Resources/Icons/NodeEditorIcons/PathCutter.png"
 PATH_TOOL = r"Resources/Icons/NodeEditorIcons/PathTool.png"
 SELECT_TOOL = r"Resources/Icons/NodeEditorIcons/SelectTool.png"
 
-PATH_TOOL_CURSOR = r"Resources/Icons/Cursors/PathToolCursor.png"
+PATH_TOOL_CURSOR = r"Resources/Icons/Cursors/Path.png"
 PATH_CUTTER_CURSOR = r"Resources/Icons/Cursors/PathCutterCursor.png"
 
 
