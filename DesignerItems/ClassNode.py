@@ -30,10 +30,15 @@ class Container(QtWidgets.QWidget):
                 min-height: 25px;
             }}
             
+            QPushButton:hover{{
+                border: 1px solid #ffffff;
+                background-color: {btn_hover_color}; 
+            }}
+            
             """
 
     resized = QtCore.pyqtSignal()
-    itemChanged = QtCore.pyqtSignal() # emits when there is a change in text or a button is pressed
+    itemChanged = QtCore.pyqtSignal()  # emits when there is a change in text or a button is pressed
 
     def __init__(self, title="Class", *args, **kwargs):
         super(Container, self).__init__(*args, **kwargs)
@@ -181,20 +186,26 @@ class Container(QtWidgets.QWidget):
             meth.deserialize(method)
             self.insertIntoMethodLayout(meth)
 
-    def setTheme(self, theme: dict):
-        self.setStyleSheet(self._style.format(fg_color=theme['header_fg'],
+    def setTheme(self, theme: dict, globalstyle=""):
+
+        btn_hover_color = list(QtGui.QColor(theme['button_bg_color']).getHsv())
+        btn_hover_color = QtGui.QColor().fromHsv(*btn_hover_color[:2],
+                                                 btn_hover_color[2] - 15 if btn_hover_color[2] > 20 else 10,
+                                                 btn_hover_color[3])
+
+        self.setStyleSheet(globalstyle+self._style.format(fg_color=theme['header_fg'],
                                               bg_color=theme['header_bg'],
                                               body_bg_color=theme['body_bg'],
                                               body_fg_color=theme['body_fg'],
                                               btn_color=theme['button_color'],
-                                              btn_bg_color=theme['button_bg_color']
+                                              btn_bg_color=theme['button_bg_color'],
+                                              btn_hover_color=btn_hover_color.name()
                                               ))
-
 
 
 class ClassNode(QtWidgets.QGraphicsObject):
     removed = QtCore.pyqtSignal()
-    itemChanged = QtCore.pyqtSignal() # signal emitted when the item changes
+    itemChanged = QtCore.pyqtSignal()  # signal emitted when the item changes
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
@@ -232,7 +243,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.proxy = QtWidgets.QGraphicsProxyWidget(self)
 
         self.proxy.setWidget(self.container)
-        # self.proxy.setMinimumSize(300, 200)
         self.proxy.setContentsMargins(0, 0, 0, 0)
 
         self.container.setTitle(self._title)
@@ -268,11 +278,11 @@ class ClassNode(QtWidgets.QGraphicsObject):
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
-    def setTheme(self, theme: dict):
-        self.container.setTheme(theme)
+    def setTheme(self, theme: dict, globalstyle):
+        self.container.setTheme(theme, globalstyle)
         self._selection_color = QtGui.QColor(theme['selection_color'])
         self._border_color = QtGui.QColor(theme['border_color'])
-    
+
     def getDestination(self):
         for item in self._path:
             yield item.getDestinationNode()

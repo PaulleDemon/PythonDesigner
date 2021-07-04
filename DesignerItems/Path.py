@@ -55,6 +55,7 @@ class Path(QtWidgets.QGraphicsPathItem):
         self.defaultZValue = 2
 
         self.path_calc = PathCalc(self._sourcePoint, self._destinationPoint)
+        self._style=""
 
     def pathColor(self):
         return self._path_color
@@ -86,11 +87,12 @@ class Path(QtWidgets.QGraphicsPathItem):
 
     PathWidth = pyqtProperty(float, penWidth, setPenWidth)
 
-    def setTheme(self, theme: dict):
+    def setTheme(self, theme: dict, globalstyle):
         self.setPenWidth(theme['path width'])
         self.setSelectionColor(QtGui.QColor(theme['selection color']))
         self.setHoverColor(QtGui.QColor(theme['selection color']))
         self.setPathColor(QtGui.QColor(theme['path color']))
+        self._style = globalstyle
 
     def getSourcePoints(self):
         return self._sourcePoint
@@ -183,6 +185,7 @@ class Path(QtWidgets.QGraphicsPathItem):
         #     return
 
         menu = QtWidgets.QMenu()
+        menu.setStyleSheet(self._style)
 
         direct_path = QtWidgets.QAction("Direct Path")
         direct_path.triggered.connect(lambda: self.setPathType(DIRECT_PATH))
@@ -200,9 +203,6 @@ class Path(QtWidgets.QGraphicsPathItem):
         double_headed.triggered.connect(lambda: self.setArrowHead(DOUBLE_HEADED))
 
         invert_head = QtWidgets.QAction("Invert Head")
-        # invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED)
-        # if self._arrow_type == DESTINATION_HEADED
-        # else self.setArrowHead(DESTINATION_HEADED))
         invert_head.triggered.connect(self.invertArrowHead)
 
         def setZValue(parent, z: float) -> None:

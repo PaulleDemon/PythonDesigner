@@ -14,6 +14,7 @@ class Preference(QtWidgets.QDialog):  # preference window
         super(Preference, self).__init__(*args, **kwargs)
         self.setModal(True)
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
+        self.setMaximumHeight(250)
 
         self.setLayout(QtWidgets.QVBoxLayout())
 
@@ -149,7 +150,9 @@ class Preference(QtWidgets.QDialog):  # preference window
                 "path width": float(self.path_width.text()) if self.path_width.text() else 1,
                 "cut color": self.cut_color.palette().button().color().name(),
                 "cutter width": float(self.cutter_width.text()) if self.cutter_width.text() else 1
-            }
+            },
+
+            "theme": self.theme_options.currentText()
         }
 
         return theme
@@ -174,6 +177,7 @@ class Preference(QtWidgets.QDialog):  # preference window
         grid_theme = self.theme['grid']
         class_node_theme = self.theme['class node']
         path_theme = self.theme['path']
+        current_theme = self.theme['theme']
 
         self.pen_width.setText(f"{grid_theme['grid_pen_width']}")
         self.changeBtnColor(hex=grid_theme['grid_bg'], widget=self.grid_background_color)
@@ -193,3 +197,5 @@ class Preference(QtWidgets.QDialog):  # preference window
         self.changeBtnColor(hex=class_node_theme['selection_color'], widget=self.node_selection_color)
         self.changeBtnColor(hex=class_node_theme['button_color'], widget=self.node_button_color)
         self.changeBtnColor(hex=class_node_theme['button_bg_color'], widget=self.node_button_bg_color)
+
+        self.theme_options.setCurrentText(current_theme)

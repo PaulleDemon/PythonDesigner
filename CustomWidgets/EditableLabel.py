@@ -137,6 +137,7 @@ class ClassType(EditableLabel):  # class that specifies what type of method, eg:
 
     def addComment(self):
         win = CommentDialog()
+        win.setStyleSheet(self.styleSheet())
 
         if win.exec():
             self.comment = win.getComment()
