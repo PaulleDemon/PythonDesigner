@@ -15,6 +15,8 @@ class PythonFileGenerator(QtWidgets.QDialog):  # generator dialog give output pa
         self.setWindowTitle("Generate")
         self.setModal(True)
 
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
+
         self.op_path = ""
         self.src_path = path
 
@@ -52,6 +54,8 @@ class PythonFileGenerator(QtWidgets.QDialog):  # generator dialog give output pa
         hbox_layout2.addWidget(self.cancel_btn)
 
         grid_layout.addLayout(hbox_layout2, 4, 0, 1, 2)
+
+        self.setFixedSize(self.sizeHint())
 
     def select_folder(self):
         file_path = QtWidgets.QFileDialog.getExistingDirectory(self, "select op_path")

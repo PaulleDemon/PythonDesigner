@@ -748,6 +748,7 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
+        self.scene().update(self.scene().sceneRect())
 
 class Scene(QtWidgets.QGraphicsScene):
     sceneChanged = QtCore.pyqtSignal()

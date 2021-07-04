@@ -229,6 +229,10 @@ class CommentDialog(QtWidgets.QDialog):
         self.setModal(True)
         self.setWindowTitle(title)
 
+        pixmap = QtGui.QPixmap(32, 32)
+        pixmap.fill(QtCore.Qt.transparent)
+        self.setWindowIcon(QtGui.QIcon(pixmap))
+
         layout = QtWidgets.QGridLayout(self)
 
         self.textArea = QtWidgets.QTextEdit()

@@ -1,3 +1,5 @@
+ICON = r"Resources/Icons/PythonDesigner.png"
+
 THEME_PATH_JSON = r"Resources/"
 MAIN_WINDOW_THEME = r"Resources/Themes/Dark.qss"
 

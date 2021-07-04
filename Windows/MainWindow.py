@@ -5,19 +5,21 @@ from collections import OrderedDict
 from Windows.PreferenceWindow import Preference
 from PythonFileGenerator import PythonFileGenerator
 
-from PyQt5 import QtWidgets
-
 from DesignerItems.ClassNode import ClassNode
 from Resources import ResourcePaths
 from Windows.ViewPort import View, Scene
 
+from PyQt5 import QtWidgets, QtGui
 
-# todo: the problem why the path didn't work is because view is not updating
+
 class MainWindow(QtWidgets.QMainWindow):  # main window
     current_save_file_path = ""
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+
+        self.setWindowTitle("PythonDesigner")
+        self.setWindowIcon(QtGui.QIcon(ResourcePaths.ICON))
 
         self.view = View()
         self.view.setScene(Scene())
