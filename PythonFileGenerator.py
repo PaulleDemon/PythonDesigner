@@ -1,14 +1,14 @@
 import copy
-import os
-
-import pathlib, shutil
 import json
-import sys
+import os
+import pathlib
+import shutil
 import threading
+
 from PyQt5 import QtWidgets, QtCore
 
 
-class PythonFileGenerator(QtWidgets.QDialog):
+class PythonFileGenerator(QtWidgets.QDialog):  # generator dialog give output path
 
     def __init__(self, path, *args, **kwargs):
         super(PythonFileGenerator, self).__init__(*args, **kwargs)
@@ -91,13 +91,11 @@ class PythonFileGenerator(QtWidgets.QDialog):
 
                 msg.exec()
 
-            new_file = GenerateFile(self.src_path, self.op_path)
-            new_file.finshedGenerating.connect(self.completedGenerating)
-            new_file.generate()
+            self.new_file = GenerateFile(self.src_path, self.op_path)
+            self.new_file.finshedGenerating.connect(self.completedGenerating)
+            self.new_file.finishedCancelling.connect(self.completeCancelling)
+            self.new_file.generate()
             self.startProgressBar()
-
-
-            print("GENERATING")
 
     def getPath(self):
         return self.op_path
@@ -107,11 +105,20 @@ class PythonFileGenerator(QtWidgets.QDialog):
         self.progress_window = QtWidgets.QProgressDialog(self)
 
         self.progress_window.setLayout(QtWidgets.QVBoxLayout())
-        lbl = QtWidgets.QLabel("Generating please wait")
-        self.progress_window.layout().addWidget(lbl)
-
+        self.progress_window.canceled.disconnect(self.progress_window.cancel)
+        self.progress_window.canceled.connect(self.cancel)
+        self.progress_window.setLabelText("Generating please wait")
         self.progress_window.setRange(0, 0)
         self.progress_window.exec()
+
+    def cancel(self):
+        self.progress_window.setLabelText("Cancelling...")
+        self.new_file.cancel()
+
+    def completeCancelling(self):
+
+        os.rmdir(self.op_path)
+        self.completedGenerating()
 
     def completedGenerating(self):
         self.progress_window.close()
@@ -130,9 +137,14 @@ class PythonFileGenerator(QtWidgets.QDialog):
                     return e
 
 
-class GenerateFile(QtCore.QObject):
+# step 1: create group nodes as modules
+# step 2: create class nodes as classes
+# step 3: link paths as inheritance
+
+class GenerateFile(QtCore.QObject):  # writes python file
 
     finshedGenerating = QtCore.pyqtSignal()
+    finishedCancelling = QtCore.pyqtSignal()
 
     def __init__(self, data_path, destination_path):
         super(GenerateFile, self).__init__()
@@ -143,6 +155,7 @@ class GenerateFile(QtCore.QObject):
         self.data = {}
         self.data_path = data_path
         self.destination_path = destination_path
+        self.canceled = False
 
     def generate(self):
 
@@ -163,6 +176,10 @@ class GenerateFile(QtCore.QObject):
 
         for items in groupnodes:
             full_path = self.createDir(items['groupName'])
+
+            if self.canceled:
+                self.finishedCancelling.emit()
+                return
 
             if not full_path:
                 continue
@@ -190,7 +207,7 @@ class GenerateFile(QtCore.QObject):
 
                                 inherit = "Object"
                                 for var in copy.deepcopy(paths):
-                                    print(var['destination'])
+
                                     if var['arrowType'] not in [0, 1]:
                                         continue
 
@@ -240,9 +257,11 @@ class GenerateFile(QtCore.QObject):
                                         write.write(f"\n\tdef {memb_name}():")
                                         write.write(f"\n\t\tpass")
 
-
-        print("Running...2", classnodes)
         for x in classnodes:
+
+            if self.canceled:
+                self.finishedCancelling.emit()
+                return
 
             container = x['container']
             class_name = ''.join(container['className'].split())
@@ -255,7 +274,6 @@ class GenerateFile(QtCore.QObject):
 
                 inherit = "Object"
                 for var in paths:
-                    print(var['destination'])
                     if var['arrowType'] not in [0, 1]:
                         continue
 
@@ -307,7 +325,8 @@ class GenerateFile(QtCore.QObject):
 
         self.finshedGenerating.emit()
 
-                            # classnodes.remove(child)
+    def cancel(self):
+        self.canceled = True
 
     def createDir(self, dir):
         path = os.path.join(self.destination_path, dir)
@@ -332,16 +351,3 @@ class GenerateFile(QtCore.QObject):
             return path
 
         return False
-
-
-# step 1: create group nodes
-# step 2: create class nodes
-# step 3: link paths
-
-
-# if __name__ == "__main__":
-#     app = QtWidgets.QApplication(sys.argv)
-#
-#     win = PythonFileGenerator(r"C:/Users/Paul/Desktop/random.json")
-#     win.exec()
-#     sys.exit(app.exit())

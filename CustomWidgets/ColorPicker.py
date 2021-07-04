@@ -251,12 +251,8 @@ class ColorCircleDialog(QDialog):
         fader.setMinimum(0)
         fader.setMaximum(255)
 
-        # QColor(*startupcolor).value()
-        print(QColor(*startupcolor).value())
-        print("Color: ", startupcolor)
 
         fader.setValue(QColor(*startupcolor).value())
-        # fader.valueChanged.connect(lambda x: self.color_circle.setValue(x / 511))
         fader.valueChanged.connect(lambda x: self.color_circle.setValue(x/255))
         self.color_circle.setColor(QColor(*startupcolor))
 
@@ -280,13 +276,8 @@ class ColorCircleDialog(QDialog):
         self.value_edit.setText(color.name())
 
     def update_wheel(self, text):
-        hsv = QColor(text).toHsv()
         if QColor(text).isValid() and len(text) == 7:
-            print("Updating...", QColor(text).getHsv())
             self.color_circle.setColor(QColor(text))
-        else:
-            print("Invalid...")
-
 
 class LineEdit(QLineEdit):
 
@@ -305,7 +296,6 @@ class LineEdit(QLineEdit):
     def focusOutEvent(self, QFocusEvent):
 
         if self.text() == "":
-            print("Setting text")
             self.setText(self.previous)
         super(LineEdit, self).focusOutEvent(QFocusEvent)
 

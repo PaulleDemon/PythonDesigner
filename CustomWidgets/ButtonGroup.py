@@ -5,6 +5,8 @@ HORIZONTAL_LAYOUT = 1
 GRID_LAYOUT = 2
 
 
+# store button in a group
+
 class ButtonGroup(QtWidgets.QWidget):
     layouts = {VERTICAL_LAYOUT: QtWidgets.QVBoxLayout, HORIZONTAL_LAYOUT: QtWidgets.QHBoxLayout,
                GRID_LAYOUT: QtWidgets.QGridLayout}
@@ -20,6 +22,9 @@ class ButtonGroup(QtWidgets.QWidget):
         self.btn_grp = QtWidgets.QButtonGroup()
         self.btn_grp.setExclusive(True)
 
+        self.current_btnIndex = 0
+        self.currentSelectedBtn = None
+
         try:
             self.group_layout = ButtonGroup.layouts[layout]()
 
@@ -30,7 +35,7 @@ class ButtonGroup(QtWidgets.QWidget):
         self.btn_grp.buttonClicked.connect(self.clicked)
 
     def addToGroup(self, btn: QtWidgets.QPushButton = None, text: str = '', icon: QtGui.QIcon = QtGui.QIcon(None),
-                   **kwargs) -> QtWidgets.QPushButton:
+                   **kwargs) -> QtWidgets.QPushButton:  # adds button to group
 
         options = {"toolTip": "",
                    "checked": False,
@@ -97,10 +102,18 @@ class ButtonGroup(QtWidgets.QWidget):
                 btn.setFixedSize(size)
                 btn.setIconSize(QtCore.QSize(size.width() - 10, size.height() - 10))
 
+    def focusNext(self):  # toggles focus
 
+        try:
+            self.group_layout.itemAt(self.current_btnIndex).widget().setChecked(False)
+            if self.current_btnIndex == self.group_layout.count() - 1:
+                self.current_btnIndex = 0
+            else:
+                self.current_btnIndex += 1
 
-# if __name__  == "__main__":
-#     app = QtWidgets.QApplication(sys.argv)
-#     win = ButtonGroup()
-#     win.show()
-#     sys.exit(app.exec())
+            btn = self.group_layout.itemAt(self.current_btnIndex).widget()
+            btn.setChecked(True)
+            self.btn_grp.buttonClicked.emit(btn)
+
+        except Exception:
+            pass

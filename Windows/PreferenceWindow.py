@@ -1,4 +1,4 @@
-import sys
+
 import os
 import json
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -7,7 +7,7 @@ from CustomWidgets.ColorPicker import ColorCircleDialog
 from Resources import ResourcePaths
 
 
-class Preference(QtWidgets.QDialog):
+class Preference(QtWidgets.QDialog):  # preference window
     themeApplied = QtCore.pyqtSignal(dict)  # sends signal when preference is changed
 
     def __init__(self, *args, **kwargs):
@@ -53,6 +53,9 @@ class Preference(QtWidgets.QDialog):
         self.node_selection_color = QtWidgets.QPushButton(clicked=self.colorDialog)
         self.node_border_color = QtWidgets.QPushButton(clicked=self.colorDialog)
 
+        self.node_button_color = QtWidgets.QPushButton(clicked=self.colorDialog)
+        self.node_button_bg_color = QtWidgets.QPushButton(clicked=self.colorDialog)
+
         self.theme_options = QtWidgets.QComboBox()
         self.theme_options.addItems(["Dark", "Light"])
 
@@ -84,6 +87,8 @@ class Preference(QtWidgets.QDialog):
         formLayout.addRow("Node body background: ", self.node_body_color)
         formLayout.addRow("Node selection color: ", self.node_selection_color)
         formLayout.addRow("Node border color: ", self.node_border_color)
+        formLayout.addRow("Node button color: ", self.node_button_color)
+        formLayout.addRow("Node button background color: ", self.node_button_bg_color)
 
         formLayout.addWidget(QtWidgets.QLabel(" "))
 
@@ -132,7 +137,9 @@ class Preference(QtWidgets.QDialog):
                 "body_fg": self.node_body_fg_color.palette().button().color().name(),
                 "body_bg": self.node_body_color.palette().button().color().name(),
                 "selection_color": self.node_selection_color.palette().button().color().name(),
-                "border_color": self.node_border_color.palette().button().color().name()
+                "border_color": self.node_border_color.palette().button().color().name(),
+                "button_color": self.node_button_color.palette().button().color().name(),
+                "button_bg_color": self.node_button_bg_color.palette().button().color().name()
             },
 
             "path": {
@@ -152,7 +159,7 @@ class Preference(QtWidgets.QDialog):
         self.close()
 
     def save_changes(self):
-        # print("Foreground: ", self.node_header_fg_color.palette().button().color().name())
+
         self.theme = self.getTheme()
         with open(os.path.join(ResourcePaths.THEME_PATH_JSON, "theme.json"), 'w') as write:
             json.dump(self.theme, write, indent=4)
@@ -164,7 +171,6 @@ class Preference(QtWidgets.QDialog):
         with open(os.path.join(ResourcePaths.THEME_PATH_JSON, "theme.json"), 'r') as read:
             self.theme = json.load(read)
 
-        # print(self.theme)
         grid_theme = self.theme['grid']
         class_node_theme = self.theme['class node']
         path_theme = self.theme['path']
@@ -185,12 +191,5 @@ class Preference(QtWidgets.QDialog):
         self.changeBtnColor(hex=class_node_theme['body_fg'], widget=self.node_body_fg_color)
         self.changeBtnColor(hex=class_node_theme['body_bg'], widget=self.node_body_color)
         self.changeBtnColor(hex=class_node_theme['selection_color'], widget=self.node_selection_color)
-
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-
-    win = Preference()
-    win.show()
-
-    sys.exit(app.exec())
+        self.changeBtnColor(hex=class_node_theme['button_color'], widget=self.node_button_color)
+        self.changeBtnColor(hex=class_node_theme['button_bg_color'], widget=self.node_button_bg_color)

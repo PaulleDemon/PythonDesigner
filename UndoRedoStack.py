@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 
-class UndoRedoStack:
+class UndoRedoStack:  # stores undo redo moves in a list
 
     def __init__(self, undo_limit=10, redo_limit=5):
         self.undo_limit = undo_limit
@@ -63,6 +63,3 @@ class UndoRedoStack:
 
     def pop_undo(self):
         self.undo_stack.pop()
-
-    def pop_redo(self):
-        self.redo_stack.pop()

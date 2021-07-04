@@ -23,6 +23,13 @@ class Container(QtWidgets.QWidget):
                 background-color: transparent;
             }}
             
+            QPushButton{{
+                color: {btn_color};
+                background-color: {btn_bg_color};
+                border-radius: 2px;
+                min-height: 25px;
+            }}
+            
             """
 
     resized = QtCore.pyqtSignal()
@@ -178,9 +185,11 @@ class Container(QtWidgets.QWidget):
         self.setStyleSheet(self._style.format(fg_color=theme['header_fg'],
                                               bg_color=theme['header_bg'],
                                               body_bg_color=theme['body_bg'],
-                                              body_fg_color=theme['body_fg']
+                                              body_fg_color=theme['body_fg'],
+                                              btn_color=theme['button_color'],
+                                              btn_bg_color=theme['button_bg_color']
                                               ))
-        # print("Style: ", self.styleSheet())
+
 
 
 class ClassNode(QtWidgets.QGraphicsObject):
@@ -190,7 +199,9 @@ class ClassNode(QtWidgets.QGraphicsObject):
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
-        self._path = set()  # stores paths store it in the format {key: op_path, value: start/end 0 denotes end and 1 denotes start}
+        # self._path stores paths in the format
+        # {key: op_path, value: start/end 0 denotes end and 1 denotes start}
+        self._path = set()
 
         self.id = id(self)
 
@@ -210,7 +221,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.setFlag(self.ItemIsSelectable, True)
         self.setFlag(self.ItemSendsScenePositionChanges, True)
         self.setFlag(self.ItemSendsGeometryChanges, True)
-        # self.setFlag(self.ItemIsFocusable, True)
 
         self.setZValue(self.defaultZValue)
 

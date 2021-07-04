@@ -94,10 +94,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_TOOL))
         self.cut_path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_CUTTER))
 
-        # self.select_btn.toggled.connect(lambda: self.changeMode(SELECTION_MODE))
-        # self.path_btn.toggled.connect(lambda: self.changeMode(CONNECT_MODE))
-        # self.cut_path_btn.toggled.connect(lambda: self.changeMode(CUT_MODE))
-
         self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tools", checked=True)
         self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tools")
         self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tools")
@@ -238,19 +234,17 @@ class ViewPort(QtWidgets.QGraphicsView):
                 grp.addToGroup(item)
 
     def zoomIn(self):
-        print("Zoom: ", self.transform().m11())
+
         if self.transform().m11() <= 1.95:
             factor = 1.25
             self._zoom += 1
             self.scale(factor, factor)
 
         else:
-            # self.resetTransform()
             self.transform().m11 = 1.95
 
     def zoomOut(self):
 
-        print("Zoom: ", self.transform().m11())
         if self.transform().m11() >=0.8:
             factor = 0.8
             self._zoom -= 1
@@ -295,7 +289,6 @@ class View(ViewPort):
         self.scene().addItem(item)
 
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-        print("Menu..")
         menu = QtWidgets.QMenu(self)
 
         add_class = QtWidgets.QAction("Add Class")
@@ -322,7 +315,6 @@ class View(ViewPort):
         if any(isinstance(item, ClassNode) for item in items):
 
             for grp in self.groups:
-                print("GROUPS: ", grp)
                 action = QtWidgets.QAction(grp.groupName(), self)
                 action.triggered.connect(lambda checked, group=grp: self.moveToGroup(group))
                 add_to_grp.addAction(action)
@@ -474,10 +466,8 @@ class View(ViewPort):
             # draws paths
             item = self._scene.itemAt(pos, QtGui.QTransform())
 
-            print("ITEMS: ", item)
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
                 self.registerUndoMove()
-                print("ENTERED...")
                 self._isdrawingPath = True
                 self._current_path = Path(source=pos, destination=pos, path_type=self.path_type)
                 self._current_path.setTheme(self.path_theme)
@@ -526,7 +516,6 @@ class View(ViewPort):
             return
 
         if self._isdrawingPath:
-            print("DRAWING....")
             self._current_path.setDestinationPoints(pos)
             # self._scene.update(self.sceneRect())
             self.scene().update(self.scene().itemsBoundingRect())
@@ -665,13 +654,12 @@ class View(ViewPort):
             self.toggleToolBar()
 
         elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.btnGrp.focusNextPrevChild(True)  # todo: this doesn't work
+            self.btnGrp.focusNext()
 
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
             self.copyToClipboard()
 
         elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
-            # self.pasteFromClipboard(self.mapFromGlobal(QtGui.QCursor.pos()))
             self.pasteFromClipboard(self.mapFromParent(QtGui.QCursor.pos()))
 
         else:
@@ -687,27 +675,24 @@ class View(ViewPort):
     def registerUndoMove(self):  # registers undo move
         self.undo_redo.add(self.serialize())
 
-    def registerRedoMove(self):
+    def registerRedoMove(self): #
         self.undo_redo.add_redo(self.serialize())
 
-    def undoMove(self):
+    def undoMove(self):  # undo's move
 
         data = self.undo_redo.undo_move()
         if data:
             self.deSerialize(data)
 
-        else:
-            print("no more undo")
 
     def redoMove(self):
         data = self.undo_redo.redo_move()
         if data:
             self.deSerialize(data)
-        else:
-            print("no more redo")
+
 
     def serialize(self):
-        print("Serializing...")
+
         classNodes = []
         paths = []
         groupNode = []
