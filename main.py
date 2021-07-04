@@ -4,6 +4,7 @@ import json
 import concurrent.futures
 from collections import OrderedDict
 from PreferenceWindow import Preference
+from PythonFileGenerator import PythonFileGenerator
 
 from PyQt5 import QtWidgets
 
@@ -13,7 +14,7 @@ from ViewPort import View, Scene
 
 
 # todo: fit in view and view menu.
-# fixme: once saved into file its becomes impossible to draw path
+# fixme: once saved into file its becomes impossible to draw op_path
 
 class MainWindow(QtWidgets.QMainWindow):
     current_save_file_path = ""
@@ -94,6 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.generate_menu = QtWidgets.QMenu("Generate")
         self.generate_action = QtWidgets.QAction("Generate file")
+        self.generate_action.triggered.connect(self.generate_python_file)
 
         self.generate_menu.addActions([self.generate_action])
 
@@ -236,10 +238,11 @@ class MainWindow(QtWidgets.QMainWindow):
         save_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save As", "",
                                                              "All Files (*);;Designer Files(*.json)",
                                                              "Designer Files(*.json)")
-        print("Path: ", save_path)
+
         if save_path:
             self.current_save_file_path = save_path
-            self.save_file()
+            saved = self.save_file()
+            return saved
 
     def loadViewTheme(self):
         with open(os.path.join(ResourcePaths.THEME_PATH_JSON, "theme.json"), 'r') as read:
@@ -251,6 +254,30 @@ class MainWindow(QtWidgets.QMainWindow):
         win = Preference(self)
         win.themeApplied.connect(lambda theme: self.view.setTheme(theme))
         win.exec()
+
+    def generate_python_file(self):
+
+        if not self.current_save_file_path:
+            msg = QtWidgets.QMessageBox(self)
+            msg.setWindowTitle("Information")
+            msg.setText("Save file before generating. Do you want to save now?")
+            msg.setStandardButtons(msg.Yes|msg.No)
+
+            save = msg.exec()
+
+            if save == msg.Yes:
+                saved = self.saveAs_file()
+                if not saved:
+                    return
+
+            else:
+                return
+
+        else:
+            self.save_file()
+
+        generate = PythonFileGenerator(path=self.current_save_file_path, parent=self)
+        generate.exec()
 
 
 def main():

@@ -190,7 +190,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
-        self._path = set()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+        self._path = set()  # stores paths store it in the format {key: op_path, value: start/end 0 denotes end and 1 denotes start}
 
         self.id = id(self)
 
@@ -270,10 +270,10 @@ class ClassNode(QtWidgets.QGraphicsObject):
     def isSource(self):
         return self._isSource
 
-    def addPath(self, path):  # add new path
+    def addPath(self, path):  # add new op_path
         self._path.add(path)
 
-    def removePath(self, path):  # remove path
+    def removePath(self, path):  # remove op_path
         self._path.discard(path)
 
     def getPaths(self):

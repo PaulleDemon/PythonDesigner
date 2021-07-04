@@ -209,7 +209,7 @@ class Path(QtWidgets.QGraphicsPathItem):
             parent.setZValue(z)
             parent.defaultZValue = z
 
-        on_top = QtWidgets.QAction("Stay on Top") # places the path on top
+        on_top = QtWidgets.QAction("Stay on Top") # places the op_path on top
         on_top.triggered.connect(lambda: setZValue(self, 2))
 
         at_bottom = QtWidgets.QAction("Move to Bottom")

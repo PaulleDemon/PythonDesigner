@@ -5,17 +5,18 @@ import pathlib, shutil
 import json
 import sys
 import threading
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 
 
 class PythonFileGenerator(QtWidgets.QDialog):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, path, *args, **kwargs):
         super(PythonFileGenerator, self).__init__(*args, **kwargs)
-
+        self.setWindowTitle("Generate")
         self.setModal(True)
 
-        self.path = ""
+        self.op_path = ""
+        self.src_path = path
 
         grid_layout = QtWidgets.QGridLayout(self)
         grid_layout.setSpacing(20)
@@ -53,13 +54,13 @@ class PythonFileGenerator(QtWidgets.QDialog):
         grid_layout.addLayout(hbox_layout2, 4, 0, 1, 2)
 
     def select_folder(self):
-        file_path = QtWidgets.QFileDialog.getExistingDirectory(self, "select path")
+        file_path = QtWidgets.QFileDialog.getExistingDirectory(self, "select op_path")
         self.output_path.setText(file_path)
 
     def check_valid_path(self, text):
 
         if not os.path.isdir(text):
-            self.error_label.setText("Invalid path")
+            self.error_label.setText("Invalid op_path")
             return False
 
         return True
@@ -75,60 +76,75 @@ class PythonFileGenerator(QtWidgets.QDialog):
 
         else:
             self.error_label.setText("")
-            self.path = os.path.join(self.output_path.text(), self.project_name.text())
+            self.op_path = os.path.join(self.output_path.text(), self.project_name.text())
             # self.accept()
 
-            new_file = GenerateFile(r"C:\Users\Paul\Desktop\Code Repository"
-                                    r"\python programs\PythonDesigner\newfiledata.json", self.path)
+            removed = self.removeFiles()
 
-            generated = new_file.generate()
-
-            if generated:
+            if removed:
                 msg = QtWidgets.QMessageBox(self)
                 msg.setWindowTitle("ERROR")
                 msg.setIcon(msg.Critical)
-                msg.setText(f"{generated}")
+                msg.setText(f"{removed}")
                 msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
                 msg.buttonClicked.connect(msg.close)
 
                 msg.exec()
 
+            new_file = GenerateFile(self.src_path, self.op_path)
+            new_file.finshedGenerating.connect(self.completedGenerating)
+            new_file.generate()
+            self.startProgressBar()
+
+
+            print("GENERATING")
+
     def getPath(self):
-        return self.path
+        return self.op_path
+
+    def startProgressBar(self):
+
+        self.progress_window = QtWidgets.QProgressDialog(self)
+
+        self.progress_window.setLayout(QtWidgets.QVBoxLayout())
+        lbl = QtWidgets.QLabel("Generating please wait")
+        self.progress_window.layout().addWidget(lbl)
+
+        self.progress_window.setRange(0, 0)
+        self.progress_window.exec()
+
+    def completedGenerating(self):
+        self.progress_window.close()
+        self.close()
+
+    def removeFiles(self):
+        if os.path.exists(self.op_path):
+            for path in pathlib.Path(self.op_path).iterdir():
+                try:
+                    if path.is_file():
+                        path.unlink()
+                    elif path.is_dir():
+                        shutil.rmtree(path)
+
+                except PermissionError as e:
+                    return e
 
 
-class GenerateFile:
+class GenerateFile(QtCore.QObject):
+
+    finshedGenerating = QtCore.pyqtSignal()
 
     def __init__(self, data_path, destination_path):
-
-        self.created = False
-        self.error = ""
+        super(GenerateFile, self).__init__()
 
         if not os.path.exists(destination_path):
             os.mkdir(destination_path)
-
-        for path in pathlib.Path(destination_path).iterdir():
-            try:
-                if path.is_file():
-                    path.unlink()
-                elif path.is_dir():
-                    shutil.rmtree(path)
-
-                self.created = True
-
-            except PermissionError as e:
-                print("Error")
-                self.error = e
-                break
 
         self.data = {}
         self.data_path = data_path
         self.destination_path = destination_path
 
     def generate(self):
-
-        if not self.created:
-            return self.error
 
         thread = threading.Thread(target=self._generate)
         thread.setDaemon(True)
@@ -143,20 +159,28 @@ class GenerateFile:
         groupnodes = self.data['GroupNodes']
         paths = self.data['Paths']
 
+        clsnode_cpy = copy.deepcopy(classnodes)
+
         for items in groupnodes:
             full_path = self.createDir(items['groupName'])
-            print("FULL PATH: ", full_path)
+
             if not full_path:
                 continue
 
             else:
 
                 for child in copy.deepcopy(items['children']):
-                    for x in copy.deepcopy(classnodes):
+                    for x in clsnode_cpy:
 
                         if child == x['id']:
+
+                            # classnodes.remove(x)
+                            classnodes = [cls for cls in classnodes if cls['id'] != child]
+
                             container = x['container']
-                            create_file = self.create_python_file(os.path.join(full_path, container['className']))
+
+                            cls_name = ''.join(container['className'])
+                            create_file = self.create_python_file(os.path.join(full_path, cls_name))
 
                             if not create_file:
                                 continue
@@ -165,19 +189,19 @@ class GenerateFile:
                                 class_name = ''.join(container['className'].split())
 
                                 inherit = "Object"
-                                for var in paths:
+                                for var in copy.deepcopy(paths):
                                     print(var['destination'])
                                     if var['arrowType'] not in [0, 1]:
                                         continue
 
                                     if var['destination'] == child:
-                                        for c in classnodes:
+                                        for c in clsnode_cpy:
                                             if c['id'] == var['source']:
                                                 inherit = c['container']['className']
                                                 inherit = "".join(inherit.split())
 
                                                 write.write(f"\nfrom {inherit} import {inherit}\n")
-
+                                                paths.remove(var)
                                                 break
 
                                 write.write(f"\nclass {class_name}({inherit}):\n")
@@ -216,6 +240,73 @@ class GenerateFile:
                                         write.write(f"\n\tdef {memb_name}():")
                                         write.write(f"\n\t\tpass")
 
+
+        print("Running...2", classnodes)
+        for x in classnodes:
+
+            container = x['container']
+            class_name = ''.join(container['className'].split())
+            create_file = self.create_python_file(class_name)
+
+            if not create_file:
+                continue
+
+            with open(create_file, 'w') as write:
+
+                inherit = "Object"
+                for var in paths:
+                    print(var['destination'])
+                    if var['arrowType'] not in [0, 1]:
+                        continue
+
+                    if var['destination'] == x['id']:
+                        for c in classnodes:
+                            if c['id'] == var['source']:
+                                inherit = c['container']['className']
+                                inherit = "".join(inherit.split())
+
+                                write.write(f"\nfrom {inherit} import {inherit}\n")
+
+                                break
+
+                write.write(f"\nclass {class_name}({inherit}):\n")
+
+                if not container['variables'] and not container['methods']:
+                    write.write("\tpass\n")
+                    continue
+
+                for var in copy.deepcopy(container['variables']):
+                    if var['type'] == 'C':
+                        var_name = ''.join(var['text'].split())
+                        write.write(f"\n\t{var_name} = None")
+                        container['variables'].remove(var)
+
+                if container['variables']:
+                    write.write('\n\n\tdef __init__(*args, **kwargs):\n')
+
+                for var in container['variables']:
+                    var_name = ''.join(var['text'].split())
+                    write.write(f"\n\t\tself.{var_name} = None")
+
+                for var in container['methods']:
+                    memb_name = ''.join(var['text'].split())
+                    write.write("\n\n\t")
+                    if var['type'] == 'I':
+                        write.write(f"\n\tdef {memb_name}(self):")
+                        write.write(f"\n\t\tpass")
+
+                    elif var['type'] == 'C':
+                        write.write("@classmethod")
+                        write.write(f"\n\tdef {memb_name}(cls):")
+                        write.write(f"\n\t\tpass")
+
+                    else:
+                        write.write("@staticmethod")
+                        write.write(f"\n\tdef {memb_name}():")
+                        write.write(f"\n\t\tpass")
+
+        self.finshedGenerating.emit()
+
                             # classnodes.remove(child)
 
     def createDir(self, dir):
@@ -248,9 +339,9 @@ class GenerateFile:
 # step 3: link paths
 
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-
-    win = PythonFileGenerator()
-    win.exec()
-    sys.exit(app.exit())
+# if __name__ == "__main__":
+#     app = QtWidgets.QApplication(sys.argv)
+#
+#     win = PythonFileGenerator(r"C:/Users/Paul/Desktop/random.json")
+#     win.exec()
+#     sys.exit(app.exit())

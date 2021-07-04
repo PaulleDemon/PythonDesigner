@@ -83,7 +83,7 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.class_node_theme = {}
         self.path_theme = {}
 
-    def initUI(self):  # initializes tools on the left side (select tool, path tool, cutter tool)
+    def initUI(self):  # initializes tools on the left side (select tool, op_path tool, cutter tool)
 
         self.btnGrp = ButtonGroup.ButtonGroup(ButtonGroup.VERTICAL_LAYOUT, parent=self)
         self.btnGrp.setFixedBtnSize(QtCore.QSize(50, 50))
@@ -549,7 +549,7 @@ class View(ViewPort):
         else:
             super(ViewPort, self).mouseMoveEvent(event)
 
-    def removeIntersectingPaths(self):  # removes all the paths over which the cut path is drawn
+    def removeIntersectingPaths(self):  # removes all the paths over which the cut op_path is drawn
 
         def filterInstances(items, instanceOf):
             for _item in items:
@@ -623,7 +623,7 @@ class View(ViewPort):
                 if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
                     self._item1 = self._item1.parentItem()
 
-                if item in self._item1.getDestination():  # remove path if it is already pointing to same destination
+                if item in self._item1.getDestination():  # remove op_path if it is already pointing to same destination
                     self._scene.removeItem(self._current_path)
 
                 self._item1.addPath(self._current_path)
@@ -636,7 +636,7 @@ class View(ViewPort):
 
             else:
                 self._scene.removeItem(self._current_path)
-                self.undo_redo.pop_undo()  # remove the registered undo move if the path operation fails
+                self.undo_redo.pop_undo()  # remove the registered undo move if the op_path operation fails
 
             self._item1 = None
             self._scene.update(self.sceneRect())
