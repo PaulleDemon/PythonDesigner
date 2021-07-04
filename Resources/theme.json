@@ -1,0 +1,26 @@
+{
+    "grid": {
+        "grid_pen_width": 1.5,
+        "grid_bg": "#2a2a2a",
+        "grid_fg": "#575a5c"
+    },
+    "class node": {
+        "header_fg": "#f3efe9",
+        "header_bg": "#2f3133",
+        "body_fg": "#f00a00",
+        "body_bg": "#646464",
+        "selection_color": "#4eff40",
+        "border_color": "#f0f0f0",
+        "button_color": "#fefffd",
+        "button_bg_color": "#323232"
+    },
+    "path": {
+        "path type": "Direct",
+        "path color": "#f7e5ff",
+        "selection color": "#8d94f0",
+        "path width": 2.0,
+        "cut color": "#f63207",
+        "cutter width": 3.0
+    },
+    "theme": "Dark"
+}

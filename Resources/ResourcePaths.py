@@ -1,4 +1,5 @@
 THEME_PATH_JSON = r"Resources/"
+MAIN_WINDOW_THEME = r"Resources/Themes/Dark.qss"
 
 PATH_CUTTER = r"Resources/Icons/NodeEditorIcons/PathCutter.png"
 PATH_TOOL = r"Resources/Icons/NodeEditorIcons/PathTool.png"

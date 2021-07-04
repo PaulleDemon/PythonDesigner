@@ -100,7 +100,7 @@ class ViewPort(QtWidgets.QGraphicsView):
 
         self.btnGrp.toggled.connect(self.changeMode)
 
-    def setTheme(self, theme: dict):
+    def setTheme(self, theme: dict, mainwindowstye=""):
 
         self.scene_theme = theme["grid"]
         self.class_node_theme = theme["class node"]
@@ -121,11 +121,11 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setStyleSheet(_style.format(grid_color=self.scene_theme['grid_fg'],
                                          grid_bg_color=self.scene_theme['grid_bg'],
                                          pen_width=self.scene_theme['grid_pen_width']
-                                         ))
+                                         )+mainwindowstye)
 
         for item in self.scene().items():
             if isinstance(item, ClassNode):
-                item.setTheme(self.class_node_theme)
+                item.setTheme(self.class_node_theme, mainwindowstye)
 
             elif isinstance(item, Path):
                 item.setTheme(self.path_theme)
@@ -223,12 +223,12 @@ class ViewPort(QtWidgets.QGraphicsView):
     def addClass(self, pos: QtCore.QPoint):  # adds new class
         node = ClassNode()
         node.setPos(self.mapToScene(pos))
-        node.setTheme(self.class_node_theme)
-        self._scene.addItem(node)
+        node.setTheme(self.class_node_theme, self.styleSheet())
+        self.scene().addItem(node)
 
     def moveToGroup(self, grp):  # moves selected items to group
 
-        selectedItems = self._scene.selectedItems()
+        selectedItems = self.scene().selectedItems()
         for item in selectedItems:
             if isinstance(item, ClassNode) and not item.parentItem():
                 grp.addToGroup(item)
@@ -266,13 +266,6 @@ class ViewPort(QtWidgets.QGraphicsView):
         elif event.angleDelta().y() < 0:
             self.zoomOut()
 
-        # todo: transform reset
-        # if self.transform().m11() < 0.5:
-        #     self.scale(1.25, 1.25)
-        #
-        # if self.transform().m11() >= 2:
-        #     self.scale(0.8, 0.8)
-
 
 class View(ViewPort):
 
@@ -282,7 +275,6 @@ class View(ViewPort):
         self.setBackground()
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
-        # self._scene.changed.connect(self.registerUndoMove)
         self._scene.sceneChanged.connect(self.registerUndoMove)
 
     def addItem(self, item: QtWidgets.QGraphicsObject):
@@ -382,7 +374,7 @@ class View(ViewPort):
         for nodes in data['ClassNodes']:
             node = ClassNode()
             node.deserialize(nodes)
-            node.setTheme(self.class_node_theme)
+            node.setTheme(self.class_node_theme, self.styleSheet())
             self._scene.addItem(node)
 
             node.setPos(new_pos + node.pos())
@@ -410,7 +402,7 @@ class View(ViewPort):
 
         for paths in data['Paths']:
             path = Path()
-            path.setTheme(self.path_theme)
+            path.setTheme(self.path_theme, self.styleSheet())
             for item in newly_added_node:
                 if isinstance(item, ClassNode):
                     if item.id == paths['source']:
@@ -470,7 +462,7 @@ class View(ViewPort):
                 self.registerUndoMove()
                 self._isdrawingPath = True
                 self._current_path = Path(source=pos, destination=pos, path_type=self.path_type)
-                self._current_path.setTheme(self.path_theme)
+                self._current_path.setTheme(self.path_theme, self.styleSheet())
                 self._scene.addItem(self._current_path)
                 self._item1 = item
                 return
@@ -517,7 +509,6 @@ class View(ViewPort):
 
         if self._isdrawingPath:
             self._current_path.setDestinationPoints(pos)
-            # self._scene.update(self.sceneRect())
             self.scene().update(self.scene().itemsBoundingRect())
 
             return
@@ -574,13 +565,10 @@ class View(ViewPort):
                 self._scene.addItem(group)
                 self.groups.add(group)
 
-                # self.registerRedoMove()
-
                 if not group.childItems() or len(group.childItems()) < 2:
                     self._scene.removeItem(group)
                     self.groups.remove(group)
                     self.undo_redo.pop_undo()  # remove the registered undo move if the rectangle operation fails
-                    # self.undo_redo.pop_redo()
 
             self._scene.removeItem(self._groupRectangle)
 
@@ -628,7 +616,8 @@ class View(ViewPort):
                 self.undo_redo.pop_undo()  # remove the registered undo move if the op_path operation fails
 
             self._item1 = None
-            self._scene.update(self.sceneRect())
+            # self._scene.update(self.scene().itemsBoundingRect())
+            self.update()
             self._isdrawingPath = False
             self._current_path = None
 
@@ -716,15 +705,10 @@ class View(ViewPort):
 
         self.clear_scene()
 
-        # self._scene = Scene()
-        # self._selected_items = set()
-        # self.groups = set()
-        # self.setScene(self._scene)
-
         for nodes in data['ClassNodes']:
             node = ClassNode()
             node.deserialize(nodes)
-            node.setTheme(self.class_node_theme)
+            node.setTheme(self.class_node_theme, self.styleSheet())
             self._scene.addItem(node)
 
         for grpNodes in data['GroupNodes']:
@@ -748,7 +732,7 @@ class View(ViewPort):
 
         for paths in data['Paths']:
             path = Path()
-            path.setTheme(self.path_theme)
+            path.setTheme(self.path_theme, self.styleSheet())
             for item in self._scene.items():
                 if isinstance(item, ClassNode):
                     if item.id == paths['source']:
@@ -763,12 +747,6 @@ class View(ViewPort):
                     path.deserialize(paths)
                     self._scene.addItem(path)
                     break
-
-    # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-    #     self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
-    #                    , QtCore.Qt.KeepAspectRatio)
-    #     self.updateSceneRect(self.sceneRect())
-    #     super(ViewPort, self).mouseDoubleClickEvent(event)
 
 
 class Scene(QtWidgets.QGraphicsScene):

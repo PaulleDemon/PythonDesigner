@@ -12,14 +12,12 @@ from Resources import ResourcePaths
 from Windows.ViewPort import View, Scene
 
 
-# todo: fit in view and view menu.
-# fixme: once saved into file its becomes impossible to draw op_path
-
+# todo: the problem why the path didn't work is because view is not updating
 class MainWindow(QtWidgets.QMainWindow):  # main window
     current_save_file_path = ""
 
     def __init__(self, *args, **kwargs):
-        super(MainWindow, self).__init__()
+        super(MainWindow, self).__init__(*args, **kwargs)
 
         self.view = View()
         self.view.setScene(Scene())
@@ -36,7 +34,7 @@ class MainWindow(QtWidgets.QMainWindow):  # main window
     def initMenus(self):
         self.menu_bar = QtWidgets.QMenuBar(self)
 
-        self.file_menu = QtWidgets.QMenu("File")
+        self.file_menu = QtWidgets.QMenu(parent=self, title="File")
 
         self.new_action = QtWidgets.QAction("New")
         self.new_action.setShortcut("ctrl+N")
@@ -61,7 +59,7 @@ class MainWindow(QtWidgets.QMainWindow):  # main window
         self.file_menu.addActions([self.new_action, self.open_action,
                                    self.save_action, self.save_as_action, self.quit_action])
 
-        self.edit_menu = QtWidgets.QMenu("Edit")
+        self.edit_menu = QtWidgets.QMenu(parent=self, title="Edit")
 
         self.undo = QtWidgets.QAction("Undo")
         self.undo.setShortcut('Ctrl+Z')
@@ -76,7 +74,7 @@ class MainWindow(QtWidgets.QMainWindow):  # main window
 
         self.edit_menu.addActions([self.undo, self.redo, self.preference])
 
-        self.view_menu = QtWidgets.QMenu("View")
+        self.view_menu = QtWidgets.QMenu(parent=self, title="View")
 
         self.zoom_in = QtWidgets.QAction("Zoom in")
         self.zoom_in.setShortcut("ctrl++")
@@ -91,18 +89,19 @@ class MainWindow(QtWidgets.QMainWindow):  # main window
 
         self.view_menu.addActions([self.zoom_in, self.zoom_out, self.fit_in_view])
 
-        self.generate_menu = QtWidgets.QMenu("Generate")
+        self.generate_menu = QtWidgets.QMenu(parent=self, title="Generate")
         self.generate_action = QtWidgets.QAction("Generate file")
         self.generate_action.triggered.connect(self.generate_python_file)
 
         self.generate_menu.addActions([self.generate_action])
 
-        self.help_menu = QtWidgets.QMenu("Help")
+        self.help_menu = QtWidgets.QMenu(parent=self, title="Help")
 
         self.docs = QtWidgets.QAction("Documentation")
         self.docs.triggered.connect(lambda: 1)
 
         self.help_menu.addAction(self.docs)
+
 
         self.menu_bar.addMenu(self.file_menu)
         self.menu_bar.addMenu(self.edit_menu)
@@ -240,12 +239,22 @@ class MainWindow(QtWidgets.QMainWindow):  # main window
         with open(os.path.join(ResourcePaths.THEME_PATH_JSON, "theme.json"), 'r') as read:
             theme = json.load(read)
 
-        self.view.setTheme(theme)
+        self.changeTheme(theme)
 
     def preference_window(self):
         win = Preference(self)
-        win.themeApplied.connect(lambda theme: self.view.setTheme(theme))
+        win.themeApplied.connect(self.changeTheme)
         win.exec()
+
+    def changeTheme(self, theme_preference):
+        mainwindow_theme = ""
+        self.setStyleSheet("")
+        if theme_preference['theme'] == 'Dark':
+            with open(ResourcePaths.MAIN_WINDOW_THEME, 'r') as read:
+                mainwindow_theme = read.read()
+                self.setStyleSheet(mainwindow_theme)
+
+        self.view.setTheme(theme_preference, mainwindow_theme)
 
     def generate_python_file(self):
 
