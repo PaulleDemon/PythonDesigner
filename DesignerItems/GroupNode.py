@@ -1,12 +1,12 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 
-from collections import OrderedDict
 
-import ClassNode
+from DesignerItems import ClassNode
 from CustomWidgets.EditableLabel import EditableLabel
 
 
-class GroupNode(QtWidgets.QGraphicsItem):
+class GroupNode(QtWidgets.QGraphicsObject):
+    itemChanged = QtCore.pyqtSignal() # emits when a name of a class node is added
 
     def __init__(self, rect: QtCore.QRectF=QtCore.QRectF(), group_name="Module",*args, **kwargs):
         super(GroupNode, self).__init__(*args, **kwargs)
@@ -29,12 +29,12 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.proxy = QtWidgets.QGraphicsProxyWidget(self)
 
         self.label = EditableLabel(text=self.group_name)
+        self.label.textEdited.connect(self.itemChanged.emit)
 
         self.label.setFixedHeight(30)
         self.label.setStyleSheet("background-color: transparent; color: white;")
 
         self.proxy.setWidget(self.label)
-        # self.proxy.setWidget(widget)
         self.proxy.setContentsMargins(0, 0, 0, 0)
         self.proxy.setFlag(self.proxy.ItemIsFocusable)
 
@@ -46,20 +46,21 @@ class GroupNode(QtWidgets.QGraphicsItem):
         self.label.setText(self.group_name)
 
     def addToGroup(self, item: QtWidgets.QGraphicsItem):
+        # self.itemChanged.emit()
         self.group_members.add(item)
+        item.setParentItem(self)
         item.removed.connect(lambda: self.removeChild(item))  # classNode
 
     def removeItemFromGroup(self, item: QtWidgets.QGraphicsItem):
+        self.itemChanged.emit()
         self.group_members.discard(item)
 
     def removeChild(self, item):
         self.removeItemFromGroup(item)
-
         if not self.group_members:
             self.scene().removeItem(self)
 
     def deleteGroup(self, members=False):  # if members is True then children will also get deleted
-
         if members:
             for item in self.childItems():
                 if isinstance(item, QtWidgets.QGraphicsProxyWidget):
@@ -81,17 +82,20 @@ class GroupNode(QtWidgets.QGraphicsItem):
         # self.scene().removeItem(self)
 
     def contextMenuEvent(self, event) -> None:
+
         menu = QtWidgets.QMenu()
 
         delete_group = QtWidgets.QAction("Delete Group")
+        delete_group.triggered.connect(self.itemChanged.emit)
         delete_group.triggered.connect(self.deleteGroup)
 
         delete_groupMembers = QtWidgets.QAction("Delete Group and Members")
+        delete_groupMembers.triggered.connect(self.itemChanged.emit)
         delete_groupMembers.triggered.connect(lambda: self.deleteGroup(True))
 
         menu.addActions([delete_group, delete_groupMembers])
         menu.exec(event.screenPos())
-    
+
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.proxy.mouseDoubleClickEvent(event)
         super(GroupNode, self).mouseDoubleClickEvent(event)
@@ -122,16 +126,19 @@ class GroupNode(QtWidgets.QGraphicsItem):
         painter.drawRect(self.boundingRect())
 
     def serialize(self):
-        ordDict = OrderedDict()
-        ordDict['id'] = self.id
-        ordDict['groupName'] = self.groupName()
-        ordDict['pos'] = {'x': self.pos().x(), 'y': self.pos().y()}
-        ordDict['children'] = [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]
+        ordDict = {'id': self.id,
+                   'groupName': self.groupName(),
+                   'pos': {'x': self.pos().x(), 'y': self.pos().y()},
+                   'children': [item.id for item in self.childItems() if isinstance(item, ClassNode.ClassNode)]}
+
         return ordDict
 
     def deserialize(self, data):
+
         self.id = data['id']
+
         self.setGroupName(data['groupName'])
         self.setPos(QtCore.QPointF(data['pos']['x'], data['pos']['y']))
         self.setZValue(self.defaultZValue)
 
+            

@@ -86,6 +86,12 @@ class Path(QtWidgets.QGraphicsPathItem):
 
     PathWidth = pyqtProperty(float, penWidth, setPenWidth)
 
+    def setTheme(self, theme: dict):
+        self.setPenWidth(theme['path width'])
+        self.setSelectionColor(QtGui.QColor(theme['selection color']))
+        self.setHoverColor(QtGui.QColor(theme['selection color']))
+        self.setPathColor(QtGui.QColor(theme['path color']))
+
     def getSourcePoints(self):
         return self._sourcePoint
 
@@ -194,14 +200,16 @@ class Path(QtWidgets.QGraphicsPathItem):
         double_headed.triggered.connect(lambda: self.setArrowHead(DOUBLE_HEADED))
 
         invert_head = QtWidgets.QAction("Invert Head")
-        invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED) if self._arrow_type == DESTINATION_HEADED
-                                                                             else self.setArrowHead(DESTINATION_HEADED))
+        # invert_head.triggered.connect(lambda: self.setArrowHead(SOURCE_HEADED)
+        # if self._arrow_type == DESTINATION_HEADED
+        # else self.setArrowHead(DESTINATION_HEADED))
+        invert_head.triggered.connect(self.invertArrowHead)
 
         def setZValue(parent, z: float) -> None:
             parent.setZValue(z)
             parent.defaultZValue = z
 
-        on_top = QtWidgets.QAction("Stay on Top") # places the path on top
+        on_top = QtWidgets.QAction("Stay on Top") # places the op_path on top
         on_top.triggered.connect(lambda: setZValue(self, 2))
 
         at_bottom = QtWidgets.QAction("Move to Bottom")
@@ -228,6 +236,15 @@ class Path(QtWidgets.QGraphicsPathItem):
         menu.addAction(remove_path)
 
         menu.exec(event.screenPos())
+
+    def invertArrowHead(self):
+        if self._arrow_type == DESTINATION_HEADED:
+            self.setArrowHead(SOURCE_HEADED)
+
+        else:
+            self.setArrowHead(DESTINATION_HEADED)
+
+        self._sourceNode, self._destinationNode = self._destinationNode, self._sourceNode
 
     def arrowCalc(self, start_point=None, end_point=None):  # calculates the point where the arrow should be drawn
 

@@ -1,17 +1,39 @@
-from collections import OrderedDict
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtProperty
 from CustomWidgets.EditableLabel import EditableLabel, ClassType
 
 
 class Container(QtWidgets.QWidget):
-
     _style = """
-            QFrame#TitleFrame{background-color: red;}
-            QFrame#Seperator{background-color: black;}
+            QFrame#TitleFrame{{
+                color: {fg_color};
+                background-color: {bg_color};
+            }}
+            QFrame#Seperator{{
+                background-color: black;
+            }}
+            
+            QFrame#BodyFrame{{
+                background-color: {body_bg_color};
+            }}
+            
+            QFrame#TitleFrame QLabel, QFrame#TitleFrame#EditableLabel QLabel, 
+            QFrame#TitleFrame#EditableLabel>QLabel, QLabel{{
+                color: {fg_color};
+                background-color: transparent;
+            }}
+            
+            QPushButton{{
+                color: {btn_color};
+                background-color: {btn_bg_color};
+                border-radius: 2px;
+                min-height: 25px;
+            }}
+            
             """
 
     resized = QtCore.pyqtSignal()
+    itemChanged = QtCore.pyqtSignal() # emits when there is a change in text or a button is pressed
 
     def __init__(self, title="Class", *args, **kwargs):
         super(Container, self).__init__(*args, **kwargs)
@@ -31,7 +53,7 @@ class Container(QtWidgets.QWidget):
         self.title_layout.setContentsMargins(2, 2, 2, 2)
         self.body_layout.setContentsMargins(2, 2, 2, 2)
 
-        self.class_title = EditableLabel(defaultText="Class Name")
+        self.class_title = EditableLabel(defaultText="Class Name", objectName="EditableLabel")
         self.class_title.setMaximumSize(self.width(), 50)
         self.class_title.enableToolTip("Class Name")
         self.class_title.setValidator()
@@ -39,15 +61,18 @@ class Container(QtWidgets.QWidget):
         self.title = QtWidgets.QLabel(title)
         self.title_layout.addRow(self.title, self.class_title)
 
-        variable_frame = QtWidgets.QFrame()
-        method_frame = QtWidgets.QFrame()
+        variable_frame = QtWidgets.QFrame(objectName="body")
+        method_frame = QtWidgets.QFrame(objectName="body")
 
         self.variable_layout = QtWidgets.QFormLayout(variable_frame)
         self.method_layout = QtWidgets.QFormLayout(method_frame)
 
         self.add_variable_btn = QtWidgets.QPushButton("Add Variable")
+        self.add_variable_btn.clicked.connect(self.itemChanged.emit)
         self.add_variable_btn.clicked.connect(self.addVariableName)
+
         self.add_method_btn = QtWidgets.QPushButton("Add Method")
+        self.add_method_btn.clicked.connect(self.itemChanged.emit)
         self.add_method_btn.clicked.connect(self.addMethodName)
 
         self.variable_layout.addWidget(self.add_variable_btn)
@@ -73,7 +98,11 @@ class Container(QtWidgets.QWidget):
         self.title_frame.setFixedHeight(height)
 
     def addVariableName(self):
-        var = ClassType(parent=self, placeHolder="Variable Name", defaultText="Variable Name")
+        var = ClassType(parent=self, placeHolder="Variable Name",
+                        defaultText="Variable Name", objectName="EditableLabel", static=False)
+        var.textEdited.connect(self.itemChanged.emit)
+        var.memberChanged.connect(self.itemChanged.emit)
+        var.setStyleSheet(self.styleSheet())
         self.insertToVarLayout(var)
         # self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
@@ -84,7 +113,11 @@ class Container(QtWidgets.QWidget):
         self.variable_layout.insertRow(self.variable_layout.count() - 1, var)
 
     def addMethodName(self):
-        var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name", mem_type=1)
+        var = ClassType(parent=self, placeHolder="Method Name", defaultText="Method Name",
+                        mem_type=1, objectName="EditableLabel")
+        var.textEdited.connect(self.itemChanged.emit)
+        var.memberChanged.connect(self.itemChanged.emit)
+        var.setStyleSheet(self.styleSheet())
         self.insertIntoMethodLayout(var)
 
     def insertIntoMethodLayout(self, var):
@@ -110,9 +143,7 @@ class Container(QtWidgets.QWidget):
         self.resized.emit()
 
     def serialize(self):
-        ordDict = OrderedDict()
-
-        ordDict['className'] = self.class_title.getText()
+        ordDict = {'className': self.class_title.getText()}
 
         varCount = self.variable_layout.count()
         varList = []
@@ -150,15 +181,27 @@ class Container(QtWidgets.QWidget):
             meth.deserialize(method)
             self.insertIntoMethodLayout(meth)
 
+    def setTheme(self, theme: dict):
+        self.setStyleSheet(self._style.format(fg_color=theme['header_fg'],
+                                              bg_color=theme['header_bg'],
+                                              body_bg_color=theme['body_bg'],
+                                              body_fg_color=theme['body_fg'],
+                                              btn_color=theme['button_color'],
+                                              btn_bg_color=theme['button_bg_color']
+                                              ))
+
+
 
 class ClassNode(QtWidgets.QGraphicsObject):
-
     removed = QtCore.pyqtSignal()
+    itemChanged = QtCore.pyqtSignal() # signal emitted when the item changes
 
     def __init__(self, *args, **kwargs):
         super(ClassNode, self).__init__(*args, **kwargs)
 
-        self._path = set()  # stores paths store it in the format {key: path, value: start/end 0 denotes end and 1 denotes start}
+        # self._path stores paths in the format
+        # {key: op_path, value: start/end 0 denotes end and 1 denotes start}
+        self._path = set()
 
         self.id = id(self)
 
@@ -178,9 +221,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.setFlag(self.ItemIsSelectable, True)
         self.setFlag(self.ItemSendsScenePositionChanges, True)
         self.setFlag(self.ItemSendsGeometryChanges, True)
-        # self.setFlag(self.ItemIsFocusable, True)
-
-        self.proxy_geometry_old = None
 
         self.setZValue(self.defaultZValue)
 
@@ -196,6 +236,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
         self.proxy.setContentsMargins(0, 0, 0, 0)
 
         self.container.setTitle(self._title)
+        self.container.itemChanged.connect(self.itemChanged.emit)
         self.container.resized.connect(self.geometryChanged)
 
         self.setTitleRect(100, 40)
@@ -227,17 +268,22 @@ class ClassNode(QtWidgets.QGraphicsObject):
     BorderColor = pyqtProperty(QtGui.QColor, _borderColor, _setborderColor)
     SelectionColor = pyqtProperty(QtGui.QColor, _selectionColor, _setSelectionColor)
 
+    def setTheme(self, theme: dict):
+        self.container.setTheme(theme)
+        self._selection_color = QtGui.QColor(theme['selection_color'])
+        self._border_color = QtGui.QColor(theme['border_color'])
+    
     def getDestination(self):
-         for item in self._path:
+        for item in self._path:
             yield item.getDestinationNode()
 
     def isSource(self):
         return self._isSource
 
-    def addPath(self, path):  # add new path
+    def addPath(self, path):  # add new op_path
         self._path.add(path)
 
-    def removePath(self, path):  # remove path
+    def removePath(self, path):  # remove op_path
         self._path.discard(path)
 
     def getPaths(self):
@@ -257,6 +303,7 @@ class ClassNode(QtWidgets.QGraphicsObject):
             path.updatePathPos()
 
     def itemChange(self, change, value):
+
         for path in self._path:
             path.updatePathPos()
 
@@ -264,7 +311,6 @@ class ClassNode(QtWidgets.QGraphicsObject):
 
     def removeNode(self):
         self.removeConnectedPaths()
-
         self.scene().removeItem(self)
         self.removed.emit()
 
@@ -297,7 +343,8 @@ class ClassNode(QtWidgets.QGraphicsObject):
 
     def geometry(self):
         pos = self.scenePos()
-        scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(), pos.y() + self.sceneBoundingRect().height())
+        scenepos = self.mapToScene(pos.x() + self.sceneBoundingRect().width(),
+                                   pos.y() + self.sceneBoundingRect().height())
         x2, y2 = scenepos.x(), scenepos.y()
 
         return QtCore.QRectF(pos, QtCore.QPointF(x2, y2))
@@ -316,17 +363,19 @@ class ClassNode(QtWidgets.QGraphicsObject):
         painter.restore()
 
     def serialize(self):
-        ordDict = OrderedDict()
+        ordDict = {}
         pos = self.scenePos()
         ordDict['id'] = self.id
-        ordDict['pos'] = OrderedDict({"x": pos.x(), "y": pos.y()})
-        ordDict['container']= self.container.serialize()
+        ordDict['pos'] = {"x": pos.x(), "y": pos.y()}
+        ordDict['container'] = self.container.serialize()
 
         return ordDict
 
     def deserialize(self, data):
+        # if change_id is True then doesn't use the existing id instead uses deserialized id
 
         self.id = data['id']
+
         pos = QtCore.QPointF(data['pos']['x'], data['pos']['y'])
         self.setPos(pos)
         self.container.deserialize(data['container'])

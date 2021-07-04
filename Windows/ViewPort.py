@@ -1,20 +1,31 @@
-import json
-import concurrent.futures
-from collections import OrderedDict
+import copy
 
-import CustomWidgets.EditableLabel
-import ResourcePaths
+import UndoRedoStack
+
+from Resources import ResourcePaths
 from CustomWidgets import ButtonGroup
-import GroupNode
-from ClassNode import ClassNode
-from Path import *
+from DesignerItems import GroupNode
+from DesignerItems.ClassNode import ClassNode
+from DesignerItems.Path import *
+
+from PyQt5 import QtWidgets
 
 SELECTION_MODE = 0
 CONNECT_MODE = 1
 CUT_MODE = 2
 
+_style = """
+         #View{{
+          qproperty-GridColor: {grid_color};
+          qproperty-BgColor: {grid_bg_color}; 
+          qproperty-PenWidth: {pen_width};
+          }}
+          
+         """
+
 
 class ViewPort(QtWidgets.QGraphicsView):
+    clipboard = None
 
     def __init__(self, *args, **kwargs):
         super(ViewPort, self).__init__(*args, **kwargs)
@@ -44,11 +55,12 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._line_cutter_path_item = None
 
         self._penWidth = 1.2
+        self.path_type = BEZIER_PATH
 
         self._cutter_pen = QtGui.QPen()
         self._cutter_pen.setColor(QtGui.QColor("#000000"))
         self._cutter_pen.setWidthF(2.0)
-        self._cutter_pen.setDashPattern([3, 3])
+        self._cutter_pen.setDashPattern([3, 5])
 
         self._background_color = QtGui.QColor("#ffffff")
         self._grid_color = QtGui.QColor("#b0b0b0")
@@ -66,7 +78,12 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setObjectName("View")
         self.initUI()
 
-    def initUI(self):  # initializes tools on the left side (select tool, path tool, cutter tool)
+        self.undo_redo = UndoRedoStack.UndoRedoStack()
+
+        self.class_node_theme = {}
+        self.path_theme = {}
+
+    def initUI(self):  # initializes tools on the left side (select tool, op_path tool, cutter tool)
 
         self.btnGrp = ButtonGroup.ButtonGroup(ButtonGroup.VERTICAL_LAYOUT, parent=self)
         self.btnGrp.setFixedBtnSize(QtCore.QSize(50, 50))
@@ -77,13 +94,41 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_TOOL))
         self.cut_path_btn = QtWidgets.QPushButton(icon=QtGui.QIcon(ResourcePaths.PATH_CUTTER))
 
-        self.select_btn.toggled.connect(lambda: self.changeMode(SELECTION_MODE))
-        self.path_btn.toggled.connect(lambda: self.changeMode(CONNECT_MODE))
-        self.cut_path_btn.toggled.connect(lambda: self.changeMode(CUT_MODE))
+        self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tools", checked=True)
+        self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tools")
+        self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tools")
 
-        self.btnGrp.addToGroup(self.select_btn, toolTip="Select Tool", checked=True)
-        self.btnGrp.addToGroup(self.path_btn, toolTip="Path Tool")
-        self.btnGrp.addToGroup(self.cut_path_btn, toolTip="Cut Tool")
+        self.btnGrp.toggled.connect(self.changeMode)
+
+    def setTheme(self, theme: dict):
+
+        self.scene_theme = theme["grid"]
+        self.class_node_theme = theme["class node"]
+        self.path_theme = theme["path"]
+
+        if self.path_theme["path type"] == "Direct":
+            self.path_type = DIRECT_PATH
+
+        elif self.path_theme["path type"] == "Bezier":
+            self.path_type = BEZIER_PATH
+
+        else:
+            self.path_type = SQUARE_PATH
+
+        self._cutter_pen.setWidthF(self.path_theme["cutter width"])
+        self._cutter_pen.setColor(QtGui.QColor(self.path_theme["cut color"]))
+
+        self.setStyleSheet(_style.format(grid_color=self.scene_theme['grid_fg'],
+                                         grid_bg_color=self.scene_theme['grid_bg'],
+                                         pen_width=self.scene_theme['grid_pen_width']
+                                         ))
+
+        for item in self.scene().items():
+            if isinstance(item, ClassNode):
+                item.setTheme(self.class_node_theme)
+
+            elif isinstance(item, Path):
+                item.setTheme(self.path_theme)
 
     def bgColor(self):
         return self._background_color
@@ -106,10 +151,15 @@ class ViewPort(QtWidgets.QGraphicsView):
         self._penWidth = width
         self.setBackground()
 
+    def setPathType(self, type=BEZIER_PATH):
+        self.path_type = type
+
     def setBackground(self):
         qp = QtGui.QPainter(self.texture)
         qp.setBrush(self._background_color)
-        qp.setPen(QtGui.QPen(self._grid_color, self._penWidth))
+        pen = QtGui.QPen(self._grid_color, self._penWidth)
+        pen.setCosmetic(True)
+        qp.setPen(pen)
         qp.drawRect(self.texture.rect())
         qp.end()
         self.scene().setBackgroundBrush(QtGui.QBrush(self.texture))
@@ -118,21 +168,26 @@ class ViewPort(QtWidgets.QGraphicsView):
     GridColor = pyqtProperty(QtGui.QColor, gridColor, setGridColor)
     PenWidth = pyqtProperty(float, penWidth, setPenWidth)
 
-    def changeMode(self, mode: int):  # changes mode (Available modes: Connect mode, selectMode, cut mode)
+    def changeMode(self, btn: QtWidgets.QPushButton = None, mode: int = None):
+        # changes mode (Available modes: Connect mode, selectMode, cut mode)
+
+        if mode is None:
+            mode = {self.select_btn: SELECTION_MODE, self.path_btn: CONNECT_MODE, self.cut_path_btn: CUT_MODE}[btn]
+
         self.current_mode = mode
 
         if self.current_mode == CONNECT_MODE:
             cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_TOOL_CURSOR).scaled(30, 30))
-            self.viewport().setCursor(cursor)
+            QtWidgets.QApplication.setOverrideCursor(cursor)
             self.setCursor(cursor)
 
         elif self.current_mode == CUT_MODE:
             cursor = QtGui.QCursor(QtGui.QPixmap(ResourcePaths.PATH_CUTTER_CURSOR).scaled(30, 30))
-            self.viewport().setCursor(cursor)
+            QtWidgets.QApplication.setOverrideCursor(cursor)
             self.setCursor(cursor)
 
         else:
-            self.viewport().setCursor(QtCore.Qt.ArrowCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.ArrowCursor)
             self.setCursor(QtCore.Qt.ArrowCursor)
 
     def selectionChanged(self):  # moves all the selected items on top
@@ -168,7 +223,7 @@ class ViewPort(QtWidgets.QGraphicsView):
     def addClass(self, pos: QtCore.QPoint):  # adds new class
         node = ClassNode()
         node.setPos(self.mapToScene(pos))
-
+        node.setTheme(self.class_node_theme)
         self._scene.addItem(node)
 
     def moveToGroup(self, grp):  # moves selected items to group
@@ -176,8 +231,50 @@ class ViewPort(QtWidgets.QGraphicsView):
         selectedItems = self._scene.selectedItems()
         for item in selectedItems:
             if isinstance(item, ClassNode) and not item.parentItem():
-                item.setParentItem(grp)
-                item.setPos(item.mapToParent(item.pos()))
+                grp.addToGroup(item)
+
+    def zoomIn(self):
+
+        if self.transform().m11() <= 1.95:
+            factor = 1.25
+            self._zoom += 1
+            self.scale(factor, factor)
+
+        else:
+            self.transform().m11 = 1.95
+
+    def zoomOut(self):
+
+        if self.transform().m11() >=0.8:
+            factor = 0.8
+            self._zoom -= 1
+
+            self.scale(factor, factor)
+
+        elif self.transform().m11() >= 2:
+            self.resetTransform()
+
+    def fitView(self):
+        self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
+                       , QtCore.Qt.KeepAspectRatio)
+
+    def wheelEvent(self, event: QtGui.QWheelEvent):
+
+        if event.angleDelta().y() > 0:
+            self.zoomIn()
+
+        elif event.angleDelta().y() < 0:
+            self.zoomOut()
+
+        # todo: transform reset
+        # if self.transform().m11() < 0.5:
+        #     self.scale(1.25, 1.25)
+        #
+        # if self.transform().m11() >= 2:
+        #     self.scale(0.8, 0.8)
+
+
+class View(ViewPort):
 
     def setScene(self, scene) -> None:
         super(ViewPort, self).setScene(scene)
@@ -185,30 +282,17 @@ class ViewPort(QtWidgets.QGraphicsView):
         self.setBackground()
         self._scene.selectionChanged.connect(self.selectionChanged)
         self._scene.setItemIndexMethod(self._scene.NoIndex)
+        # self._scene.changed.connect(self.registerUndoMove)
+        self._scene.sceneChanged.connect(self.registerUndoMove)
 
-    def wheelEvent(self, event: QtGui.QWheelEvent):
-
-        if self.transform().m11() >= 2 or self.transform().m11() < 0.5:
-            self.resetTransform()
-
-        if event.angleDelta().y() > 0 and self._zoom < 3:
-            factor = 1.25
-            self._zoom += 1
-
-        elif event.angleDelta().y() < 0 and self._zoom > -2:
-            factor = 0.8
-            self._zoom -= 1
-
-        else:
-            return
-
-        self.scale(factor, factor)
+    def addItem(self, item: QtWidgets.QGraphicsObject):
+        self.scene().addItem(item)
 
     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-
         menu = QtWidgets.QMenu(self)
 
         add_class = QtWidgets.QAction("Add Class")
+        add_class.triggered.connect(self.registerUndoMove)
         add_class.triggered.connect(lambda: self.addClass(event.pos()))
 
         items = self._scene.selectedItems()
@@ -223,7 +307,8 @@ class ViewPort(QtWidgets.QGraphicsView):
         remove_from_group = QtWidgets.QAction("Remove from group")
         remove_from_group.triggered.connect(lambda: removeClassFromGroup(self.scene()))
 
-        if itemAt or (len(items) == 1 and not isinstance(items[0], ClassNode)):
+        if itemAt or (len(items) == 1 and
+                      not any(isinstance(x, ClassNode) or isinstance(x, GroupNode.GroupNode) for x in items)):
             super(ViewPort, self).contextMenuEvent(event)
             return
 
@@ -231,20 +316,122 @@ class ViewPort(QtWidgets.QGraphicsView):
 
             for grp in self.groups:
                 action = QtWidgets.QAction(grp.groupName(), self)
-                action.triggered.connect(lambda: self.moveToGroup(grp))
+                action.triggered.connect(lambda checked, group=grp: self.moveToGroup(group))
                 add_to_grp.addAction(action)
 
             if not self.groups or not items:
                 add_to_grp.setDisabled(True)
 
+        copyItems = QtWidgets.QAction("Copy")
+        copyItems.setShortcut("ctrl+C")
+        copyItems.triggered.connect(self.copyToClipboard)
+
+        if not self.scene().selectedItems():
+            copyItems.setDisabled(True)
+
+        paste = QtWidgets.QAction("Paste")
+        paste.setShortcut("Ctrl+V")
+        paste.triggered.connect(lambda: self.pasteFromClipboard(event.pos()))
+
+        if not self.clipboard:
+            paste.setDisabled(True)
+
         menu.addAction(add_class)
         menu.addMenu(add_to_grp)
-        menu.addAction(remove_from_group)
+        menu.addActions([remove_from_group, copyItems, paste])
 
-        menu.exec(self.mapToParent(event.pos()))
+        menu.exec(self.mapToGlobal(event.pos()))
 
+    def copyToClipboard(self):
 
-class View(ViewPort):
+        classNodes = []
+        paths = []
+        groupNode = []
+
+        def serialize(_item):
+            if isinstance(_item, ClassNode):
+                classNodes.append(_item.serialize())
+
+            elif isinstance(_item, Path):
+                paths.append(_item.serialize())
+
+            elif isinstance(_item, GroupNode.GroupNode):
+                groupNode.append(_item.serialize())
+
+        for item in self.scene().items():
+            if item.isSelected() or (item.parentItem() and item.parentItem().isSelected()):
+                serialize(item)
+
+            if isinstance(item, Path) and (item.getSourceNode() and item.getDestinationNode()) \
+                    and (item.getSourceNode().isSelected() and item.getDestinationNode().isSelected()):
+                serialize(item)
+
+        data = {"ClassNodes": classNodes,
+                "Paths": paths,
+                "GroupNodes": groupNode}
+
+        self.clipboard = data
+
+    def pasteFromClipboard(self, pos):
+        data = copy.deepcopy(self.clipboard)
+        new_pos = self.mapToScene(pos)
+
+        newly_added_node = set()
+        newly_added_group = set()
+
+        for nodes in data['ClassNodes']:
+            node = ClassNode()
+            node.deserialize(nodes)
+            node.setTheme(self.class_node_theme)
+            self._scene.addItem(node)
+
+            node.setPos(new_pos + node.pos())
+
+            newly_added_node.add(node)
+
+        for grpNodes in data['GroupNodes']:
+
+            groupNode = GroupNode.GroupNode()
+            children = grpNodes['children']
+
+            for item in newly_added_node:
+
+                if isinstance(item, ClassNode):
+                    if item.id in grpNodes['children']:
+                        item.setParentItem(groupNode)
+                        children.remove(item.id)
+
+                if not children:
+                    break
+
+            groupNode.deserialize(grpNodes)
+            self._scene.addItem(groupNode)
+            newly_added_group.add(groupNode)
+
+        for paths in data['Paths']:
+            path = Path()
+            path.setTheme(self.path_theme)
+            for item in newly_added_node:
+                if isinstance(item, ClassNode):
+                    if item.id == paths['source']:
+                        path.setSourceNode(item)
+                        item.addPath(path)
+
+                    if item.id == paths['destination']:
+                        path.setDestinationNode(item)
+                        item.addPath(path)
+
+                if path.getDestinationNode() and path.getSourceNode():
+                    path.deserialize(paths)
+                    self._scene.addItem(path)
+                    break
+
+        for item in newly_added_node:
+            item.id = id(item)
+
+        for item in newly_added_group:
+            item.id = id(item)
+            self.groups.add(item)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent):
 
@@ -259,12 +446,15 @@ class View(ViewPort):
                     item = item.parentItem()
 
                 item.setSelected(True)
+
             return
 
         if event.modifiers() == QtCore.Qt.ControlModifier and event.button() & QtCore.Qt.RightButton:
+            self.registerUndoMove()
             # starts group rectangle
             self._groupRectangle = QtWidgets.QGraphicsRectItem()
             self._groupRectangle.setBrush(self._groupRectangleBgBrush)
+
             self._scene.addItem(self._groupRectangle)
             self._groupRectangle.setZValue(2)
             self._isdrawingGroupRect = True
@@ -275,9 +465,12 @@ class View(ViewPort):
                 event.modifiers() == QtCore.Qt.ControlModifier and event.button() == QtCore.Qt.LeftButton):
             # draws paths
             item = self._scene.itemAt(pos, QtGui.QTransform())
+
             if item and type(item) == QtWidgets.QGraphicsProxyWidget and isinstance(item.parentItem(), ClassNode):
+                self.registerUndoMove()
                 self._isdrawingPath = True
-                self._current_path = Path(source=pos, destination=pos)
+                self._current_path = Path(source=pos, destination=pos, path_type=self.path_type)
+                self._current_path.setTheme(self.path_theme)
                 self._scene.addItem(self._current_path)
                 self._item1 = item
                 return
@@ -300,6 +493,9 @@ class View(ViewPort):
                 event.accept()
 
             else:
+                if self.scene().selectedItems():
+                    self.registerUndoMove()
+
                 super().mousePressEvent(event)
 
         elif event.button() == QtCore.Qt.MidButton:  # panning
@@ -321,7 +517,8 @@ class View(ViewPort):
 
         if self._isdrawingPath:
             self._current_path.setDestinationPoints(pos)
-            self._scene.update(self.sceneRect())
+            # self._scene.update(self.sceneRect())
+            self.scene().update(self.scene().itemsBoundingRect())
 
             return
 
@@ -341,7 +538,7 @@ class View(ViewPort):
         else:
             super(ViewPort, self).mouseMoveEvent(event)
 
-    def removeIntersectingPaths(self):  # removes all the paths over which the cut path is drawn
+    def removeIntersectingPaths(self):  # removes all the paths over which the cut op_path is drawn
 
         def filterInstances(items, instanceOf):
             for _item in items:
@@ -376,9 +573,14 @@ class View(ViewPort):
                 group.setZValue(group.defaultZValue)
                 self._scene.addItem(group)
                 self.groups.add(group)
+
+                # self.registerRedoMove()
+
                 if not group.childItems() or len(group.childItems()) < 2:
                     self._scene.removeItem(group)
                     self.groups.remove(group)
+                    self.undo_redo.pop_undo()  # remove the registered undo move if the rectangle operation fails
+                    # self.undo_redo.pop_redo()
 
             self._scene.removeItem(self._groupRectangle)
 
@@ -410,7 +612,7 @@ class View(ViewPort):
                 if isinstance(self._item1, QtWidgets.QGraphicsProxyWidget):
                     self._item1 = self._item1.parentItem()
 
-                if item in self._item1.getDestination():  # remove path if it is already pointing to same destination
+                if item in self._item1.getDestination():  # remove op_path if it is already pointing to same destination
                     self._scene.removeItem(self._current_path)
 
                 self._item1.addPath(self._current_path)
@@ -423,6 +625,7 @@ class View(ViewPort):
 
             else:
                 self._scene.removeItem(self._current_path)
+                self.undo_redo.pop_undo()  # remove the registered undo move if the op_path operation fails
 
             self._item1 = None
             self._scene.update(self.sceneRect())
@@ -453,17 +656,43 @@ class View(ViewPort):
         elif event.key() == QtCore.Qt.Key_Tab and event.modifiers() == QtCore.Qt.ControlModifier:
             self.btnGrp.focusNext()
 
-        elif event.key() == QtCore.Qt.Key_S and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.serialize()
+        elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.copyToClipboard()
 
-        elif event.key() == QtCore.Qt.Key_O and event.modifiers() == QtCore.Qt.ControlModifier:
-            self.deSerialize()
+        elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.pasteFromClipboard(self.mapFromParent(QtGui.QCursor.pos()))
 
         else:
             super(ViewPort, self).keyPressEvent(event)
 
+    def clear_scene(self):
+        self._selected_items = set()
+        self.groups = set()
+        self.undo_redo = UndoRedoStack.UndoRedoStack()
+        self._scene = Scene()
+        self.setScene(self._scene)
+
+    def registerUndoMove(self):  # registers undo move
+        self.undo_redo.add(self.serialize())
+
+    def registerRedoMove(self): #
+        self.undo_redo.add_redo(self.serialize())
+
+    def undoMove(self):  # undo's move
+
+        data = self.undo_redo.undo_move()
+        if data:
+            self.deSerialize(data)
+
+
+    def redoMove(self):
+        data = self.undo_redo.redo_move()
+        if data:
+            self.deSerialize(data)
+
+
     def serialize(self):
-        print("Serializing...")
+
         classNodes = []
         paths = []
         groupNode = []
@@ -477,48 +706,34 @@ class View(ViewPort):
             elif isinstance(item, GroupNode.GroupNode):
                 groupNode.append(item.serialize())
 
-        data = OrderedDict({"ClassNodes": classNodes,
-                            "Paths": paths,
-                            "GroupNodes": groupNode})
+        data = {"ClassNodes": classNodes,
+                "Paths": paths,
+                "GroupNodes": groupNode}
 
-        def save():
-            with open("datafile.json", "w") as write:
-                json.dump(data, write, indent=2)
+        return data
 
-            print("Serialize complete.")
+    def deSerialize(self, data: dict):
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            _ = executor.submit(save)
+        self.clear_scene()
 
-    def deSerialize(self):
-
-        self._scene = QtWidgets.QGraphicsScene()
-        self._selected_items = set()
-
-        self.setScene(self._scene)
-
-        def load():
-            with open("datafile.json", "r") as read:
-                data = OrderedDict(json.load(read))
-
-            return data
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(load)
-            data = future.result()
-
-        print("Data: ", data)
+        # self._scene = Scene()
+        # self._selected_items = set()
+        # self.groups = set()
+        # self.setScene(self._scene)
 
         for nodes in data['ClassNodes']:
             node = ClassNode()
             node.deserialize(nodes)
+            node.setTheme(self.class_node_theme)
             self._scene.addItem(node)
 
         for grpNodes in data['GroupNodes']:
 
             groupNode = GroupNode.GroupNode()
             children = grpNodes['children']
+
             for item in self._scene.items():
+
                 if isinstance(item, ClassNode):
                     if item.id in grpNodes['children']:
                         item.setParentItem(groupNode)
@@ -529,10 +744,11 @@ class View(ViewPort):
 
             groupNode.deserialize(grpNodes)
             self._scene.addItem(groupNode)
+            self.groups.add(groupNode)
 
         for paths in data['Paths']:
             path = Path()
-
+            path.setTheme(self.path_theme)
             for item in self._scene.items():
                 if isinstance(item, ClassNode):
                     if item.id == paths['source']:
@@ -548,6 +764,18 @@ class View(ViewPort):
                     self._scene.addItem(path)
                     break
 
-# def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-#     self.fitInView(self.sceneRect().marginsAdded(QtCore.QMarginsF(5, 5, 5, 5)), QtCore.Qt.KeepAspectRatio)
-#     super(ViewPort, self).mouseDoubleClickEvent(event)
+    # def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+    #     self.fitInView(self.scene().itemsBoundingRect().marginsAdded(QtCore.QMarginsF(10, 10, 10, 10))
+    #                    , QtCore.Qt.KeepAspectRatio)
+    #     self.updateSceneRect(self.sceneRect())
+    #     super(ViewPort, self).mouseDoubleClickEvent(event)
+
+
+class Scene(QtWidgets.QGraphicsScene):
+    sceneChanged = QtCore.pyqtSignal()
+
+    def addItem(self, item: QtWidgets.QGraphicsObject or QtWidgets.QGraphicsItem) -> None:
+        if isinstance(item, QtWidgets.QGraphicsObject) or issubclass(item.__class__, QtWidgets.QGraphicsObject):
+            item.itemChanged.connect(self.sceneChanged.emit)
+
+        super(Scene, self).addItem(item)
