@@ -36,7 +36,12 @@ To draw module simply press ctrl and right mouse drag.
 
 
 **Cut path**
+
  To cut path use ctrl and drag using left mouse button or use the cut tool
+ 
+ **Change member type**
+ 
+ To chage member type from instance to class/static right click beside the added member in the class and choose your option.
  
  **Generate file**
  
