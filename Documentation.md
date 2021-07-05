@@ -21,16 +21,18 @@
 
 
 **Add class**
+
 To add a class right click and click on add class.
 
 **Draw path**
+
 To draw a path use ctrl and drag with left mouse button or use the path tool in the tool bar.
 
 ![Path tool](https://user-images.githubusercontent.com/64060109/124412373-fcf3b000-dd6b-11eb-9321-e9abc9aceae0.gif)
 
 **draw module**
 
-To draw module simply press ctrl and right mouse drag.![Designer info](https://user-images.githubusercontent.com/64060109/124416783-5f9d7980-dd75-11eb-8abb-92097cf91b93.png)
+To draw module simply press ctrl and right mouse drag.
 
 
 **Cut path**
