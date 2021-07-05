@@ -238,7 +238,7 @@ class GenerateFile(QtCore.QObject):  # writes python file
                                         container['variables'].remove(var)
 
                                 if container['variables']:
-                                    write.write('\n\n\tdef __init__(*args, **kwargs):\n')
+                                    write.write('\n\n\tdef __init__(self, *args, **kwargs):\n')
 
                                 for var in container['variables']:
                                     var_name = ''.join(var['text'].split())
