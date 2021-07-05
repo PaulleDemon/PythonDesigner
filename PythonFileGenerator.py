@@ -276,7 +276,7 @@ class GenerateFile(QtCore.QObject):  # writes python file
 
             with open(create_file, 'w') as write:
 
-                inherit = "Object"
+                inherit = "object"
                 for var in paths:
                     if var['arrowType'] not in [0, 1]:
                         continue
