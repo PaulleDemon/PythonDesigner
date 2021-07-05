@@ -286,8 +286,8 @@ class GenerateFile(QtCore.QObject):  # writes python file
                             if c['id'] == var['source']:
                                 inherit = c['container']['className']
                                 inherit = "".join(inherit.split())
-
-                                write.write(f"\nfrom {inherit} import {inherit}\n")
+                                filename = inherit[0].lower() + inherit[1:]
+                                write.write(f"\nfrom {filename} import {inherit}\n")
 
                                 break
 
