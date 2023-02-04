@@ -128,7 +128,7 @@ class ViewPort(QtWidgets.QGraphicsView):
                 item.setTheme(self.class_node_theme, mainwindowstye)
 
             elif isinstance(item, Path):
-                item.setTheme(self.path_theme)
+                item.setTheme(self.path_theme, "")
 
     def bgColor(self):
         return self._background_color
