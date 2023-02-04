@@ -8,3 +8,18 @@ All the icons used in this project is free to use with/without attribution. No u
 
 
 [read documentation/demo](https://github.com/PaulleDemon/PythonDesigner/blob/master/Documentation.md)
+
+
+To run it
+```git
+git clone https://github.com/PaulleDemon/PythonDesigner
+```
+then 
+```
+pip install -r requirements.txt
+```
+
+now run
+```
+python main.py
+```
